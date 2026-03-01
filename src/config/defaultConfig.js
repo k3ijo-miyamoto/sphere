@@ -69,6 +69,12 @@ export const DEFAULT_CONFIG = {
     institutionalDrift: 0.018,
     hegemonyEventThreshold: 0.72
   },
+  policyGenome: {
+    enabled: true,
+    evolutionIntervalTicks: 48,
+    baseMutation: 0.04,
+    inheritanceBlend: 0.72
+  },
   urbanDynamics: {
     hubRiseThreshold: 1.15,
     declineThreshold: 0.52,

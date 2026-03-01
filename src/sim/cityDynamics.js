@@ -9,6 +9,8 @@ export function updateCityDynamics({ world, frame, config, rng }) {
   updateSystemExtensions(world, config, rng, frame);
   ensureResourceSystems(world);
   ensureResourcePolicyState(world);
+  ensurePolicyGenomeState(world, config);
+  world.systemState.policyGenome.tick = (world.systemState.policyGenome.tick ?? 0) + 1;
 
   const presence = frame.people.cityPresence;
   const religionByCity = frame.people.religionByCity || {};
@@ -20,6 +22,8 @@ export function updateCityDynamics({ world, frame, config, rng }) {
   for (const city of world.cities) {
     ensureCityResourceProfile(city);
     city.lifecycle = city.lifecycle ?? { riseScore: 0.4, declineScore: 0.3, status: "stable" };
+    ensureCityPolicyGenome(city, rng);
+    const genomePolicy = getGenomePolicyBias(city, policy);
     const popNow = presence[city.id] || 0;
     const stats = birthsDeaths.get(city.id) || { births: 0, deaths: 0, net: 0, marriages: 0, divorces: 0 };
     const relRows = religionByCity[city.id] || [];
@@ -27,7 +31,7 @@ export function updateCityDynamics({ world, frame, config, rng }) {
     const congestionTarget = clamp(popNow / Math.max(80, city.population * 0.012), 0.05, 1);
     city.metrics.congestion = city.metrics.congestion * 0.82 + congestionTarget * 0.18;
 
-    const policySafetyBoost = (policy.safetyBudget || 0.5) * 0.08;
+    const policySafetyBoost = genomePolicy.safetyBudget * 0.08;
     const inequalityPressure = city.metrics.inequality * 0.06;
     city.metrics.safety = clamp(
       city.metrics.safety + policySafetyBoost - inequalityPressure - city.metrics.congestion * 0.03,
@@ -35,14 +39,14 @@ export function updateCityDynamics({ world, frame, config, rng }) {
       0.98
     );
 
-    const policyWelfare = (policy.welfareBudget || 0.5) * 0.07;
+    const policyWelfare = genomePolicy.welfareBudget * 0.07;
     city.metrics.trust = clamp(
       city.metrics.trust + policyWelfare + stats.marriages * 0.002 - stats.divorces * 0.003 - city.metrics.inequality * 0.025,
       0.05,
       0.98
     );
 
-    const policyEducation = (policy.educationBudget || 0.5) * 0.08;
+    const policyEducation = genomePolicy.educationBudget * 0.08;
     city.metrics.productivity = clamp(
       city.metrics.productivity + policyEducation * 0.03 - city.metrics.congestion * 0.015,
       0.25,
@@ -80,7 +84,7 @@ export function updateCityDynamics({ world, frame, config, rng }) {
     city.metrics.costOfLiving = clamp(city.metrics.costOfLiving + climate * 0.006, 0.2, 2.8);
     city.metrics.trust = clamp(city.metrics.trust + culture * 0.004 - epidemic * 0.004, 0.02, 0.99);
 
-    const resourcePolicy = chooseResourcePolicyAction(world, city.id, config, rng);
+    const resourcePolicy = chooseResourcePolicyAction(world, city.id, config, rng, city.policyGenome);
     const resourceEffect = applyCityResourceCycle({
       city,
       popNow,
@@ -131,6 +135,8 @@ export function updateCityDynamics({ world, frame, config, rng }) {
       city.lifecycle.status = "stable";
     }
   }
+
+  maybeEvolvePolicyGenomes(world, config, rng);
 
   if (config.policy?.mode === "growth") {
     for (const city of world.cities) {
@@ -226,6 +232,39 @@ function ensureResourcePolicyState(world) {
   world.systemState.resourcePolicies = world.systemState.resourcePolicies ?? { cities: {} };
 }
 
+function ensurePolicyGenomeState(world, config) {
+  world.systemState = world.systemState ?? {};
+  world.systemState.policyGenome = world.systemState.policyGenome ?? {};
+  world.systemState.policyGenome.enabled = config?.policyGenome?.enabled !== false;
+  world.systemState.policyGenome.tick = world.systemState.policyGenome.tick ?? 0;
+  world.systemState.policyGenome.lastEvolutionTick = world.systemState.policyGenome.lastEvolutionTick ?? 0;
+}
+
+function ensureCityPolicyGenome(city, rng) {
+  city.policyGenome = city.policyGenome ?? {
+    safetyFocus: clamp(0.5 + rng.range(-0.2, 0.2), 0, 1),
+    welfareFocus: clamp(0.5 + rng.range(-0.2, 0.2), 0, 1),
+    educationFocus: clamp(0.5 + rng.range(-0.2, 0.2), 0, 1),
+    greenAffinity: clamp(0.5 + rng.range(-0.22, 0.22), 0, 1),
+    growthAffinity: clamp(0.5 + rng.range(-0.22, 0.22), 0, 1),
+    explorationBias: clamp(0.5 + rng.range(-0.25, 0.25), 0, 1),
+    mutationRate: clamp(0.5 + rng.range(-0.2, 0.2), 0.05, 1),
+    fitnessEma: 0.5
+  };
+}
+
+function getGenomePolicyBias(city, policy) {
+  const g = city.policyGenome ?? {};
+  const safetyWeight = 0.65 + (g.safetyFocus ?? 0.5) * 0.7;
+  const welfareWeight = 0.65 + (g.welfareFocus ?? 0.5) * 0.7;
+  const educationWeight = 0.65 + (g.educationFocus ?? 0.5) * 0.7;
+  return {
+    safetyBudget: clamp((policy.safetyBudget ?? 0.5) * safetyWeight, 0.05, 1.6),
+    welfareBudget: clamp((policy.welfareBudget ?? 0.5) * welfareWeight, 0.05, 1.6),
+    educationBudget: clamp((policy.educationBudget ?? 0.5) * educationWeight, 0.05, 1.6)
+  };
+}
+
 function ensureCityResourcePolicy(world, cityId) {
   ensureResourcePolicyState(world);
   const row = (world.systemState.resourcePolicies.cities[cityId] = world.systemState.resourcePolicies.cities[cityId] ?? {
@@ -244,9 +283,10 @@ function ensureCityResourcePolicy(world, cityId) {
   return row;
 }
 
-function chooseResourcePolicyAction(world, cityId, config, rng) {
+function chooseResourcePolicyAction(world, cityId, config, rng, genome = null) {
   const row = ensureCityResourcePolicy(world, cityId);
-  const eps = clamp(config?.rl?.resourceEpsilon ?? config?.rl?.epsilon ?? 0.12, 0.01, 0.45);
+  const genomeExploration = 0.8 + (genome?.explorationBias ?? 0.5) * 0.8;
+  const eps = clamp((config?.rl?.resourceEpsilon ?? config?.rl?.epsilon ?? 0.12) * genomeExploration, 0.01, 0.55);
   let action = row.lastAction ?? "balanced";
   if (rng.next() < eps) {
     action = RESOURCE_RL_ACTIONS[Math.floor(rng.range(0, RESOURCE_RL_ACTIONS.length))];
@@ -254,7 +294,7 @@ function chooseResourcePolicyAction(world, cityId, config, rng) {
     let best = RESOURCE_RL_ACTIONS[0];
     let bestQ = -Infinity;
     for (const a of RESOURCE_RL_ACTIONS) {
-      const q = row.qByAction[a] ?? 0;
+      const q = (row.qByAction[a] ?? 0) + resourceActionGenomeBias(a, genome);
       if (q > bestQ) {
         bestQ = q;
         best = a;
@@ -273,6 +313,89 @@ function chooseResourcePolicyAction(world, cityId, config, rng) {
     return { action, extractionMult: 0.9, renewableBoost: 1.28, demandMult: 0.95 };
   }
   return { action: "balanced", extractionMult: 1, renewableBoost: 1, demandMult: 1 };
+}
+
+function resourceActionGenomeBias(action, genome) {
+  if (!genome) {
+    return 0;
+  }
+  const green = genome.greenAffinity ?? 0.5;
+  const growth = genome.growthAffinity ?? 0.5;
+  const safety = genome.safetyFocus ?? 0.5;
+  const edu = genome.educationFocus ?? 0.5;
+  if (action === "green_shift") {
+    return green * 0.14 + edu * 0.04;
+  }
+  if (action === "conserve") {
+    return green * 0.08 + safety * 0.05;
+  }
+  if (action === "extract") {
+    return growth * 0.12 - green * 0.07;
+  }
+  return 0.03;
+}
+
+function maybeEvolvePolicyGenomes(world, config, rng) {
+  if (!(config?.policyGenome?.enabled ?? true)) {
+    return;
+  }
+  const state = world.systemState?.policyGenome ?? {};
+  const interval = Math.max(12, Math.floor(config?.policyGenome?.evolutionIntervalTicks ?? 48));
+  const tick = state.tick ?? 0;
+  const last = state.lastEvolutionTick ?? 0;
+  if (tick - last < interval) {
+    return;
+  }
+  const rows = (world.cities ?? [])
+    .map((city) => {
+      ensureCityPolicyGenome(city, rng);
+      const fitness = clamp(
+        city.metrics.productivity * 0.36 +
+          city.metrics.trust * 0.24 +
+          city.metrics.safety * 0.2 +
+          (1 - city.metrics.inequality) * 0.12 +
+          (1 - city.metrics.instabilityRisk) * 0.08,
+        0,
+        1.8
+      );
+      city.policyGenome.fitnessEma = Number(((city.policyGenome.fitnessEma ?? fitness) * 0.82 + fitness * 0.18).toFixed(4));
+      city.lifecycle = city.lifecycle ?? {};
+      city.lifecycle.genomeFitness = Number(city.policyGenome.fitnessEma.toFixed(3));
+      return { city, fitness: city.policyGenome.fitnessEma };
+    })
+    .sort((a, b) => b.fitness - a.fitness);
+  if (!rows.length) {
+    state.lastEvolutionTick = tick;
+    return;
+  }
+  const eliteCount = Math.max(1, Math.floor(rows.length * 0.3));
+  const elites = rows.slice(0, eliteCount);
+  const medianFitness = rows[Math.floor(rows.length / 2)]?.fitness ?? rows[0].fitness;
+  const inheritBlend = clamp(config?.policyGenome?.inheritanceBlend ?? 0.72, 0.3, 0.95);
+  const baseMutation = clamp(config?.policyGenome?.baseMutation ?? 0.04, 0.005, 0.2);
+  for (const row of rows) {
+    const city = row.city;
+    if (row.fitness >= medianFitness && rng.next() > 0.35) {
+      continue;
+    }
+    const donor = elites[Math.floor(rng.range(0, elites.length))]?.city;
+    if (!donor || donor.id === city.id) {
+      continue;
+    }
+    const mutationScale = baseMutation * (0.65 + (city.policyGenome.mutationRate ?? 0.5) * 0.9);
+    blendGenome(city.policyGenome, donor.policyGenome, inheritBlend, mutationScale, rng);
+  }
+  state.lastEvolutionTick = tick;
+}
+
+function blendGenome(target, donor, blend, mutationScale, rng) {
+  const keys = ["safetyFocus", "welfareFocus", "educationFocus", "greenAffinity", "growthAffinity", "explorationBias", "mutationRate"];
+  for (const key of keys) {
+    const base = clamp((target?.[key] ?? 0.5) * (1 - blend) + (donor?.[key] ?? 0.5) * blend, 0, 1);
+    const mut = rng.range(-mutationScale, mutationScale);
+    const min = key === "mutationRate" ? 0.05 : 0;
+    target[key] = clamp(base + mut, min, 1);
+  }
 }
 
 function updateResourcePolicyLearning(world, cityId, action, outcome, config) {

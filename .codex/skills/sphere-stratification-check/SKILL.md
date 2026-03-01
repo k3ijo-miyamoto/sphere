@@ -8,6 +8,13 @@ description: Measure and compare social stratification in Sphere using inequalit
 Run a deterministic stratification report from the simulation and summarize trend direction.
 The report reads the active MCP world state (single source of truth).
 
+## Data Source Rule (important)
+
+- Prefer state API tool/report outputs.
+- If fallback is required, read `web/mcp_snapshot.json`.
+- For geopolitics-related context in interpretation, use `world.systemState.geopolitics` or `frame.geopolitics`.
+- Do not assume `world.geopolitics` is populated.
+
 ## Run Report
 
 ```bash

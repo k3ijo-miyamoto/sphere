@@ -476,3 +476,71 @@ climate & environmental pressure
 cultural evolution
 
 historical timeline replay
+
+Specification Update (Reflected From Current Implementation)
+
+Date: 2026-03-01
+
+The items below are implemented and are now part of the active system specification.
+
+Drift Summary (Original -> Current)
+
+1) Governance was a future extension -> now implemented as active systems.
+2) Geopolitics was out of scope -> now implemented as macro-level interstate dynamics.
+3) Economy was simple city/person loop -> now includes currency, banking, resource market, and company finance loops.
+4) Social systems were centered on family/religion -> now also include public institutions and service staffing dynamics.
+5) Simulation analysis was local/manual -> now includes MCP tools, state API, report scripts, and snapshot workflows.
+
+Implemented Extensions (Now in Spec)
+
+Geopolitics Layer
+
+- Nations have diplomacy state (peace/alliance/crisis/war) with tension dynamics.
+- War/crisis can trigger sanctions, ceasefire, and territorial shifts.
+- Nation lifecycle events are tracked (founding, territorial shift, extinction).
+- Military companies and secret societies exist as non-state strategic actors.
+
+Meta-Order Layer (5-level governance stack)
+
+- world_system
+- civilization_blocs
+- institutional_zones
+- nation_city_governance
+- hegemonic_networks
+
+Blocs, institutional zones, and hegemonic networks are updated in simulation runtime.
+
+Policy and Learning Layer
+
+- RL policies are used in multiple domains (company, diplomacy, resource, investment, institution).
+- City Policy Genome is implemented and evolves by mutation/inheritance with fitness feedback.
+
+Macro and Resource Layer
+
+- Resource market pricing and scarcity feedback are active.
+- Currency regime (FX/inflation/policy-rate) is active.
+- Banking layer is active (deposits/loans/net state).
+- Epidemic/climate/culture drifts are implemented as macro pressures.
+
+Institutional/Social Layer
+
+- Public service staffing and cooperation index are modeled per city.
+- Education system has policy levers and outcomes by stage.
+
+Observability and Tooling
+
+- MCP server exposes world/state tools for analysis.
+- State API provides bootstrap/summary/tick/reset/snapshot endpoints.
+- Scenario and report scripts support reproducible comparative analysis.
+
+Clarified Non-Goal Boundary
+
+The system still does not aim for tactical combat simulation.
+However, limited macro-geopolitical conflict (status transition and territorial shift) is included as emergent civilization dynamics.
+
+Runtime Profiles
+
+To support both the original minimal framing and expanded simulation:
+
+- default profile: expanded systems enabled (current mainline behavior)
+- overview profile: closer to original Project Overview scope

@@ -1452,10 +1452,24 @@ function applyEmploymentAndEconomy({
     const workers = workersByCity.get(city.id) ?? [];
     const cityCompanies = companiesByCity.get(city.id) ?? [];
     const companyCapacity = cityCompanies.reduce((sum, c) => sum + c.capacity, 0);
-    const capacity =
+    const cityBaseCapacity =
       cityCompanies.length > 0
         ? Math.max(1, Math.floor(companyCapacity * city.population * 0.06))
         : Math.max(1, Math.floor(city.population * (city.metrics.employmentCapacity ?? 0.6) * 0.08));
+    const companyOpenings = computeCompanyOpenPositions({
+      cityCompanies,
+      city,
+      cityBaseCapacity,
+      workerCount: workers.length,
+      epidemic,
+      climate
+    });
+    const capacity = companyOpenings.totalOpenings;
+    for (const c of cityCompanies) {
+      const posted = companyOpenings.byCompany.get(c.id) ?? 0;
+      c.openPositionsPosted = posted;
+      c.openPositions = posted;
+    }
 
     workers.sort((a, b) => {
       const as = a.ability.productivity + a.socioeconomic.skill + a.socioeconomic.education;
@@ -1476,13 +1490,18 @@ function applyEmploymentAndEconomy({
         worker.employerId = null;
         continue;
       }
-      const employer = pickEmployer(worker, cityCompanies, rng, world);
+      const availableEmployers = cityCompanies.filter((c) => (c.openPositions ?? 0) > 0);
+      const employer = pickEmployer(worker, availableEmployers, rng, world);
       worker.employerId = employer?.id ?? null;
       if (employer) {
         employer.employeeCount += 1;
+        employer.openPositions = Math.max(0, (employer.openPositions ?? 0) - 1);
         worker.employmentHistory.unemploymentStreak = 0;
         worker.employmentHistory.tenureByEmployer[employer.id] =
           (worker.employmentHistory.tenureByEmployer[employer.id] ?? 0) + 1;
+      } else {
+        worker.employed = false;
+        worker.employmentHistory.unemploymentStreak += 1;
       }
     }
   }
@@ -3643,6 +3662,8 @@ function createCompany({ id, city, rng, foundingDay = 0 }) {
     profit: 0,
     marketShare: 0
     ,
+    openPositions: 0,
+    openPositionsPosted: 0,
     rlPolicy: {
       qByAction: {},
       nByAction: {},
@@ -4189,6 +4210,39 @@ function pickEmployer(person, cityCompanies, rng, world) {
   return best;
 }
 
+function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, workerCount, epidemic, climate }) {
+  const byCompany = new Map();
+  if (!cityCompanies || cityCompanies.length === 0) {
+    return { totalOpenings: cityBaseCapacity, byCompany };
+  }
+  const shockPenalty = clamp(1 - (epidemic * 0.34 + climate * 0.22), 0.55, 1.08);
+  let totalRaw = 0;
+  for (const company of cityCompanies) {
+    const hiringMomentum = clamp((company.capital ?? 0) * 0.45 + Math.max(0, company.profit ?? 0) * 0.2 + (1 - (company.distress ?? 0)) * 0.35, 0.05, 1.6);
+    const laborBias = company.rlPolicy?.lastAction === "labor_focus" ? 1.2 : company.rlPolicy?.lastAction === "margin_focus" ? 0.88 : 1;
+    const base = Math.max(0.15, (company.capacity ?? 0.5) * hiringMomentum * laborBias * shockPenalty);
+    byCompany.set(company.id, base);
+    totalRaw += base;
+  }
+  const workerBound = Math.max(0, Math.floor((workerCount ?? 0) * 1.08));
+  const target = Math.max(0, Math.min(Math.floor(cityBaseCapacity * shockPenalty), workerBound));
+  let totalOpenings = 0;
+  for (const company of cityCompanies) {
+    const raw = byCompany.get(company.id) ?? 0;
+    const share = raw / Math.max(0.001, totalRaw);
+    const openings = Math.max(0, Math.floor(target * share));
+    byCompany.set(company.id, openings);
+    totalOpenings += openings;
+  }
+  if (totalOpenings <= 0 && cityCompanies[0] && workerBound > 0) {
+    byCompany.set(cityCompanies[0].id, 1);
+    totalOpenings = 1;
+  }
+  const cityEmploymentCap = Math.max(1, Math.floor((city.population ?? 1000) * (city.metrics?.employmentCapacity ?? 0.6) * 0.1));
+  totalOpenings = Math.min(totalOpenings, cityEmploymentCap);
+  return { totalOpenings, byCompany };
+}
+
 function computeCompanySummary(companies, world) {
   const rows = companies
     .map((c) => ({
@@ -4198,6 +4252,8 @@ function computeCompanySummary(companies, world) {
       sector: c.sector,
       listed: !!c.listed,
       employees: c.employeeCount,
+      openingsPosted: c.openPositionsPosted ?? 0,
+      openings: c.openPositions ?? 0,
       revenue: Number(c.revenue.toFixed(3)),
       profit: Number(c.profit.toFixed(3)),
       stock: Number((c.stockPrice ?? 1).toFixed(3)),

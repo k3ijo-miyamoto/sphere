@@ -8,6 +8,14 @@ description: Measure and compare interstate tension in Sphere using diplomacy st
 Run a deterministic geopolitics report and summarize interstate risk.
 The report reads the active MCP world state (single source of truth).
 
+## Data Source Rule (important)
+
+- Do not treat `world.geopolitics` as authoritative.
+- Authoritative sources are:
+1. `frame.geopolitics` (current tick view)
+2. `world.systemState.geopolitics` (persistent state)
+- If state API is unavailable, read `web/mcp_snapshot.json` and use `world.systemState.geopolitics`.
+
 ## Run Report
 
 ```bash
@@ -41,3 +49,4 @@ If the command is missing, add this script in `package.json`:
 "report:geopolitics": "node scripts/geopoliticsTensionReport.js"
 ```
 If state API is unreachable, run `npm run start:mcp` first.
+If output looks empty while simulation is running, verify you are not reading `world.geopolitics`.
