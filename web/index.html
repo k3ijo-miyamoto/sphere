@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sphere Civilization Viewer</title>
+    <style>
+      :root {
+        --bg0: #081221;
+        --bg1: #13314e;
+        --panel: rgba(10, 25, 42, 0.85);
+        --line: rgba(147, 195, 255, 0.3);
+        --text: #d9ebff;
+        --muted: #9ec2eb;
+        --accent: #6cc3ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at 20% 20%, var(--bg1), var(--bg0));
+        color: var(--text);
+        font-family: "IBM Plex Sans", "Noto Sans JP", sans-serif;
+      }
+
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+
+      #hud {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        width: min(42vw, 560px);
+        min-width: 320px;
+        max-height: calc(100vh - 96px);
+        overflow: auto;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+      }
+
+      #hud h1 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hud-controls {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      #hud .row {
+        margin: 3px 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      #hud strong {
+        color: var(--text);
+      }
+
+      #lineage-tree {
+        margin-top: 6px;
+        max-width: 460px;
+        max-height: 100px;
+        overflow: auto;
+        padding: 6px 8px;
+        border: 1px solid rgba(147, 195, 255, 0.25);
+        background: rgba(7, 20, 35, 0.6);
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: pre-wrap;
+      }
+
+      #legend {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      #lineage-graph-panel {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        width: min(44vw, 620px);
+        height: min(46vh, 420px);
+        border: 1px solid var(--line);
+        background: rgba(8, 20, 36, 0.82);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+      }
+
+      #lineage-graph-title {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        padding: 8px 10px 4px;
+      }
+
+      #lineage-graph {
+        width: 100%;
+        height: 100%;
+      }
+
+      #legend div {
+        margin: 3px 0;
+      }
+
+      #timeline {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 8px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      #timeline input[type="range"] {
+        width: min(40vw, 320px);
+      }
+
+      #insights {
+        margin-top: 10px;
+        border-top: 1px solid rgba(147, 195, 255, 0.25);
+        padding-top: 8px;
+      }
+
+      #right-insights {
+        position: fixed;
+        top: min(48vh, 440px);
+        right: 16px;
+        width: min(44vw, 620px);
+        max-height: calc(100vh - min(48vh, 440px) - 96px);
+        overflow: auto;
+        border: 1px solid var(--line);
+        background: rgba(8, 20, 36, 0.82);
+        backdrop-filter: blur(8px);
+        padding: 10px 12px;
+      }
+
+      .insight-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .insight-body {
+        margin-top: 4px;
+        border: 1px solid rgba(147, 195, 255, 0.2);
+        background: rgba(7, 20, 35, 0.55);
+        padding: 6px 8px;
+        font-size: 12px;
+        color: var(--text);
+        white-space: pre-wrap;
+      }
+
+      .stock-market-board {
+        white-space: normal;
+      }
+
+      .stock-summary {
+        font-size: 12px;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .stock-index-chart {
+        width: 100%;
+        height: 180px;
+        display: block;
+        border: 1px solid rgba(147, 195, 255, 0.25);
+        background: rgba(5, 14, 24, 0.95);
+      }
+
+      .stock-tape {
+        margin-top: 6px;
+        padding: 5px 6px;
+        border: 1px solid rgba(147, 195, 255, 0.2);
+        background: rgba(8, 23, 40, 0.6);
+        overflow-x: auto;
+        white-space: nowrap;
+        font-size: 11px;
+      }
+
+      .stock-tape-item {
+        display: inline-block;
+        margin-right: 14px;
+        color: var(--text);
+      }
+
+      .stock-table {
+        margin-top: 6px;
+        border: 1px solid rgba(147, 195, 255, 0.2);
+        background: rgba(6, 18, 30, 0.7);
+        font-size: 11px;
+      }
+
+      .stock-row {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr;
+        gap: 6px;
+        padding: 4px 6px;
+        border-top: 1px solid rgba(147, 195, 255, 0.12);
+      }
+
+      .stock-row span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .stock-head {
+        border-top: 0;
+        color: var(--muted);
+        background: rgba(14, 33, 53, 0.75);
+        font-weight: 600;
+      }
+
+      .stock-up {
+        color: #76ffbb;
+      }
+
+      .stock-down {
+        color: #ff8f8f;
+      }
+
+      .phase-board {
+        white-space: normal;
+      }
+
+      .phase-summary {
+        font-size: 12px;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+
+      .phase-chart {
+        width: 100%;
+        height: 140px;
+        display: block;
+        border: 1px solid rgba(147, 195, 255, 0.2);
+        background: rgba(8, 18, 30, 0.9);
+      }
+
+      .phase-legend {
+        margin-top: 6px;
+        display: flex;
+        gap: 10px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .insight-toggle {
+        border: 1px solid rgba(147, 195, 255, 0.35);
+        background: rgba(20, 46, 72, 0.6);
+        color: var(--text);
+        font-size: 11px;
+        padding: 2px 8px;
+        cursor: pointer;
+      }
+
+      .hud-button {
+        border: 1px solid rgba(147, 195, 255, 0.35);
+        background: rgba(20, 46, 72, 0.6);
+        color: var(--text);
+        font-size: 11px;
+        padding: 2px 8px;
+        cursor: pointer;
+      }
+
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        margin-right: 6px;
+      }
+
+      .a { background: #9ad1ff; }
+      .b { background: #7dffda; }
+      .c { background: #ffd27b; }
+
+      @media (max-width: 900px) {
+        #hud {
+          width: calc(100vw - 32px);
+          min-width: 0;
+          max-height: calc(100vh - 96px);
+        }
+
+        #lineage-graph-panel {
+          width: min(52vw, 560px);
+          height: min(42vh, 360px);
+        }
+
+        #right-insights {
+          top: auto;
+          right: 16px;
+          left: 16px;
+          bottom: 84px;
+          width: auto;
+          max-height: min(38vh, 340px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <h1>Sphere Civilization</h1>
+      <div class="hud-controls">
+        <button id="bgm-toggle" class="hud-button">BGM: OFF</button>
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+          Scale
+          <select id="scale-preset" class="hud-button" style="padding:1px 6px;">
+            <option value="base">900</option>
+            <option value="large">3000</option>
+            <option value="xlarge">5000</option>
+          </select>
+        </label>
+        <button id="perf-auto-toggle" class="hud-button">AutoLOD: ON</button>
+        <button id="snapshot-save-now" class="hud-button">Save Snapshot</button>
+      </div>
+      <div class="row">時刻: <strong id="time">BOOTING...</strong></div>
+      <div class="row">フェーズ: <strong id="phase">-</strong></div>
+      <div class="row">週次: <strong id="week">-</strong></div>
+      <div class="row">性能: <strong id="perf"></strong></div>
+      <div class="row">フロー: <strong id="flow">-</strong></div>
+      <div class="row">人LOD: <strong id="human-lod"></strong></div>
+      <div class="row">氏名表示(N): <strong id="name-labels"></strong></div>
+      <div class="row">状態: <strong id="states">-</strong></div>
+      <div class="row">夜間交流: <strong id="encounters">-</strong></div>
+      <div class="row">フォーカス都市: <strong id="focus"></strong></div>
+      <div class="row">宗教分布: <strong id="religion-counts"></strong></div>
+      <div class="row">宗教影響力: <strong id="religion-influence"></strong></div>
+      <div class="row">宗教信条: <strong id="religion-doctrine"></strong></div>
+      <div class="row">出生/死亡(全体): <strong id="demo-total"></strong></div>
+      <div class="row">出生/死亡(都市別): <strong id="demo-city"></strong></div>
+      <div class="row">経済サマリ: <strong id="economy"></strong></div>
+      <div class="row">企業トップ: <strong id="company-top"></strong></div>
+      <div class="row">企業(都市別): <strong id="company-city"></strong></div>
+      <div class="row">マクロ(疫病/気候/文化/市場): <strong id="macro-system"></strong></div>
+      <div class="row">国家: <strong id="nations"></strong></div>
+      <div class="row">秩序レイヤ: <strong id="meta-order"></strong></div>
+      <div class="row">外交: <strong id="diplomacy"></strong></div>
+      <div class="row">同盟関係: <strong id="alliances"></strong></div>
+      <div class="row">敵対関係: <strong id="hostilities"></strong></div>
+      <div class="row">軍事企業: <strong id="military"></strong></div>
+      <div class="row">イベント: <strong id="events"></strong></div>
+      <div class="row">国家イベント: <strong id="nation-events"></strong></div>
+      <div class="row">履歴: <strong id="history"></strong></div>
+      <div class="row">家系サマリ: <strong id="lineage-summary"></strong></div>
+      <div id="lineage-tree"></div>
+      <div class="row">経済力トップ: <strong id="top-econ"></strong></div>
+      <div class="row">知能トップ: <strong id="top-cog"></strong></div>
+      <div class="row">社交性トップ: <strong id="top-soc"></strong></div>
+      <div class="row">遺伝子潜在トップ: <strong id="top-gene"></strong></div>
+      <div class="row">エピ変動トップ: <strong id="top-epi"></strong></div>
+      <div class="row">遺伝多様性: <strong id="gene-diversity"></strong></div>
+      <div id="insights">
+        <div class="insight-head">
+          <span>現在人口</span>
+          <button id="toggle-population" class="insight-toggle">Hide</button>
+        </div>
+        <div id="population-board" class="insight-body"></div>
+        <div class="insight-head">
+          <span>都市ニュース</span>
+          <button id="toggle-city-news" class="insight-toggle">Hide</button>
+        </div>
+        <div id="city-news-board" class="insight-body"></div>
+      </div>
+    </div>
+    <div id="right-insights">
+      <div class="insight-head">
+        <span>企業株価</span>
+        <button id="toggle-stock" class="insight-toggle">Hide</button>
+      </div>
+      <div id="stock-board" class="insight-body"></div>
+      <div class="insight-head">
+        <span>位相遷移</span>
+        <button id="toggle-phase" class="insight-toggle">Hide</button>
+      </div>
+      <div id="phase-board" class="insight-body"></div>
+    </div>
+    <div id="lineage-graph-panel">
+      <div id="lineage-graph-title">LINEAGE GRAPH</div>
+      <svg id="lineage-graph" viewBox="0 0 620 420" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div id="timeline">
+      <button id="tl-live">Live</button>
+      <button id="tl-prev">◀</button>
+      <button id="tl-play">Play</button>
+      <button id="tl-next">▶</button>
+      <label>Speed
+        <select id="tl-speed">
+          <option value="1">1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+        </select>
+      </label>
+      <input id="tl-range" type="range" min="0" max="1" value="1" step="1" />
+      <span id="tl-status">Live</span>
+    </div>
+    <div id="legend">
+      <div><span class="dot a"></span>都市ノード</div>
+      <div><span class="dot" style="background:#21364f"></span>都市構造(3D)</div>
+      <div><span class="dot" style="background:#dbeeff"></span>近景で詳細都市LOD</div>
+      <div><span class="dot" style="background:#aec8e8"></span>人LOD Far(密度)</div>
+      <div><span class="dot" style="background:#85f7c7"></span>人LOD Mid(ビルボード)</div>
+      <div><span class="dot" style="background:#c9defa"></span>人LOD Near(低ポリ)</div>
+      <div><span class="dot" style="background:#ffd89d"></span>歩行者(近景)</div>
+      <div><span class="dot b"></span>フロー粒子</div>
+      <div><span class="dot c"></span>球レイヤー</div>
+      <div><span class="dot" style="background:#8dd4ff"></span>居住都市</div>
+      <div><span class="dot" style="background:#ffcc7a"></span>仕事都市</div>
+      <div><span class="dot" style="background:#a7f1be"></span>混合都市</div>
+      <div><span class="dot" style="background:#ff8c8c"></span>人: Work</div>
+      <div><span class="dot" style="background:#ffc96f"></span>人: Commute</div>
+      <div><span class="dot" style="background:#85f7c7"></span>人: Leisure</div>
+      <div><span class="dot" style="background:#6dffbe"></span>疫病オーラ</div>
+      <div><span class="dot" style="background:#ffae7a"></span>自然災害ストレス</div>
+      <div><span class="dot" style="background:#9ed1ff"></span>イベントパルス</div>
+      <div><span class="dot" style="background:#6f95c2"></span>国家領土(透過)</div>
+      <div><span class="dot" style="background:#9bbdff"></span>国家間外交ライン</div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js"
+        }
+      }
+    </script>
+    <script>
+      window.addEventListener("error", (event) => {
+        const el = document.getElementById("time");
+        if (el) {
+          el.textContent = `error: ${event.message || "runtime"}`;
+        }
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        const reason = event.reason?.message || String(event.reason || "promise");
+        const el = document.getElementById("time");
+        if (el) {
+          el.textContent = `error: ${reason}`;
+        }
+      });
+    </script>
+    <script type="module" src="/web/main.js"></script>
+    <script>
+      (function () {
+        const API = "/api/state";
+        const ids = {
+          time: "time",
+          phase: "phase",
+          week: "week",
+          flow: "flow",
+          states: "states",
+          encounters: "encounters",
+          history: "history"
+        };
+        const get = (id) => document.getElementById(id);
+        const set = (id, value) => {
+          const el = get(id);
+          if (el) el.textContent = value;
+        };
+        const week = (d, w) => {
+          const a = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+          const i = Number.isFinite(d) ? Math.max(0, Math.min(6, d)) : 0;
+          return a[i] + (w ? " (Weekend)" : "");
+        };
+        const sumFlow = (frame) => {
+          const rows = Array.isArray(frame?.flows) ? frame.flows : [];
+          return rows.reduce(
+            (acc, r) => {
+              acc.out += Number(r?.outbound ?? 0);
+              acc.in += Number(r?.inbound ?? 0);
+              return acc;
+            },
+            { out: 0, in: 0 }
+          );
+        };
+        const render = (frame) => {
+          if (!frame) return;
+          const s = frame?.people?.stateCounts ?? {};
+          const e = frame?.people?.encounterSummary?.total ?? 0;
+          const f = sumFlow(frame);
+          set(ids.time, frame.time ?? "-");
+          set(ids.phase, frame.phase ?? "-");
+          set(ids.week, week(frame.dayOfWeek, frame.isWeekend));
+          set(ids.flow, `out ${f.out} / in ${f.in}`);
+          set(ids.states, `H:${s.Home ?? 0} C:${s.Commute ?? 0} W:${s.Work ?? 0} L:${s.Leisure ?? 0} S:${s.Sleep ?? 0}`);
+          set(ids.encounters, String(e));
+          const hc = Number.isFinite(frame.historyCursor) ? frame.historyCursor + 1 : 1;
+          const hl = Number.isFinite(frame.historyLength) ? frame.historyLength : 1;
+          set(ids.history, `${hc}/${hl}`);
+        };
+        const getJson = async (path, init) => {
+          const r = await fetch(API + path, init);
+          if (!r.ok) throw new Error(`${path}:${r.status}`);
+          return r.json();
+        };
+        let active = false;
+        const start = async () => {
+          if (active) return;
+          active = true;
+          try {
+            const boot = await getJson("/bootstrap");
+            render(boot?.frame);
+          } catch (err) {
+            set(ids.time, `fallback error: ${err?.message ?? err}`);
+            return;
+          }
+          setInterval(async () => {
+            try {
+              const t = await getJson("/tick", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ steps: 1 })
+              });
+              render(t?.frame);
+            } catch (err) {
+              set(ids.time, `fallback error: ${err?.message ?? err}`);
+            }
+          }, 700);
+        };
+        setTimeout(() => {
+          const t = get(ids.time)?.textContent?.trim() ?? "";
+          if (!t) start();
+        }, 1500);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sphere Stratification Check"
+  short_description: "Check Sphere social stratification trends"
+  default_prompt: "Use $sphere-stratification-check to evaluate whether inequality is rising in the current Sphere run."

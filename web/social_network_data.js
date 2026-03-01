@@ -1,0 +1,285 @@
+window.__SOCIAL_NETWORK_DATA__ = {
+  "frame": {
+    "time": "Day 4 13:30",
+    "phase": "Daytime"
+  },
+  "company": {
+    "id": 3,
+    "name": "Merca Industry 3",
+    "sector": "Industry",
+    "city": "Merca",
+    "nation": "Helix Dominion",
+    "capital": 0,
+    "profit": -41.9005,
+    "stockPrice": 0.4
+  },
+  "network": {
+    "members": 11,
+    "internalEdges": 3,
+    "avgInternalWeight": 0.982,
+    "topConnectors": [
+      {
+        "id": 414,
+        "name": "Kai Reed 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 22.432
+      },
+      {
+        "id": 91,
+        "name": "Darin Solis",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.685
+      },
+      {
+        "id": 501,
+        "name": "Avery Mercer 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.6
+      },
+      {
+        "id": 518,
+        "name": "Taylor Lane",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.579
+      },
+      {
+        "id": 417,
+        "name": "Runa Ridge 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 21.472
+      },
+      {
+        "id": 359,
+        "name": "Petra Stroud",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 44,
+        "strength": 21.448
+      },
+      {
+        "id": 527,
+        "name": "Shin Asahi 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 21.028
+      },
+      {
+        "id": 325,
+        "name": "Runa Ridge 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.891
+      },
+      {
+        "id": 668,
+        "name": "Saki Nagiri 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.528
+      },
+      {
+        "id": 174,
+        "name": "Darin Rayne",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.276
+      },
+      {
+        "id": 520,
+        "name": "Aoi Takane",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 44,
+        "strength": 19.843
+      }
+    ],
+    "strongestEdges": [
+      {
+        "from": 359,
+        "fromName": "Petra Stroud",
+        "to": 520,
+        "toName": "Aoi Takane",
+        "weight": 1
+      },
+      {
+        "from": 91,
+        "fromName": "Darin Solis",
+        "to": 668,
+        "toName": "Saki Nagiri 2",
+        "weight": 0.999
+      },
+      {
+        "from": 359,
+        "fromName": "Petra Stroud",
+        "to": 414,
+        "toName": "Kai Reed 3",
+        "weight": 0.947
+      }
+    ],
+    "nodes": [
+      {
+        "id": 414,
+        "name": "Kai Reed 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 22.432
+      },
+      {
+        "id": 91,
+        "name": "Darin Solis",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.685
+      },
+      {
+        "id": 501,
+        "name": "Avery Mercer 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.6
+      },
+      {
+        "id": 518,
+        "name": "Taylor Lane",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 21.579
+      },
+      {
+        "id": 417,
+        "name": "Runa Ridge 3",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 21.472
+      },
+      {
+        "id": 359,
+        "name": "Petra Stroud",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 44,
+        "strength": 21.448
+      },
+      {
+        "id": 527,
+        "name": "Shin Asahi 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 43,
+        "strength": 21.028
+      },
+      {
+        "id": 325,
+        "name": "Runa Ridge 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.891
+      },
+      {
+        "id": 668,
+        "name": "Saki Nagiri 2",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.528
+      },
+      {
+        "id": 174,
+        "name": "Darin Rayne",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 45,
+        "strength": 20.276
+      },
+      {
+        "id": 520,
+        "name": "Aoi Takane",
+        "cityId": "C2",
+        "city": "Merca",
+        "employerId": 3,
+        "state": "Work",
+        "degree": 44,
+        "strength": 19.843
+      }
+    ],
+    "edges": [
+      {
+        "from": 359,
+        "to": 520,
+        "weight": 1
+      },
+      {
+        "from": 91,
+        "to": 668,
+        "weight": 0.999
+      },
+      {
+        "from": 359,
+        "to": 414,
+        "weight": 0.947
+      }
+    ]
+  }
+};

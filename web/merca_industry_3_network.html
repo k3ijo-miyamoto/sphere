@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Social Network Viewer</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #1d2a3a;
+      --muted: #607089;
+      --line: #d5deea;
+      --edge: #2f77c9;
+      --work: #198754;
+      --commute: #0d6efd;
+      --leisure: #fd7e14;
+      --home: #6f42c1;
+      --sleep: #6c757d;
+    }
+    body {
+      margin: 0;
+      font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      background: linear-gradient(120deg, #eef4ff 0%, #f9fbff 55%, #edf8f1 100%);
+      color: var(--ink);
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 24px auto;
+      padding: 0 16px 32px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      padding: 16px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fcfdff;
+    }
+    .stat .k {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat .v {
+      font-weight: 700;
+      font-size: 16px;
+      margin-top: 2px;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      background: #fbfdff;
+      border: 1px solid var(--line);
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 6px;
+      text-align: left;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>企業内 人的ネットワーク</h1>
+      <div class="sub" id="subtitle">loading...</div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Members</div><div class="v" id="members">-</div></div>
+        <div class="stat"><div class="k">Internal Edges</div><div class="v" id="edges">-</div></div>
+        <div class="stat"><div class="k">Avg Edge Weight</div><div class="v" id="avgWeight">-</div></div>
+        <div class="stat"><div class="k">Capital</div><div class="v" id="capital">-</div></div>
+        <div class="stat"><div class="k">Profit</div><div class="v" id="profit">-</div></div>
+      </div>
+
+      <svg id="graph" viewBox="0 0 980 620" aria-label="network graph"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--work)"></i>Work</span>
+        <span><i class="dot" style="background:var(--commute)"></i>Commute</span>
+        <span><i class="dot" style="background:var(--leisure)"></i>Leisure</span>
+        <span><i class="dot" style="background:var(--home)"></i>Home</span>
+        <span><i class="dot" style="background:var(--sleep)"></i>Sleep</span>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Degree</th><th>Strength</th><th>State</th></tr>
+        </thead>
+        <tbody id="topTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="social_network_data.js"></script>
+  <script>
+    async function loadData() {
+      const q = new URLSearchParams(window.location.search);
+      const dataPath = q.get("data") || "social_network_data.json";
+      try {
+        const res = await fetch(dataPath, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`failed to load ${dataPath}: ${res.status}`);
+        }
+        return await res.json();
+      } catch {
+        if (window.__SOCIAL_NETWORK_DATA__) {
+          return window.__SOCIAL_NETWORK_DATA__;
+        }
+        throw new Error("network data not found. Run export:social-network first.");
+      }
+    }
+
+    const stateColor = {
+      Work: getComputedStyle(document.documentElement).getPropertyValue("--work").trim(),
+      Commute: getComputedStyle(document.documentElement).getPropertyValue("--commute").trim(),
+      Leisure: getComputedStyle(document.documentElement).getPropertyValue("--leisure").trim(),
+      Home: getComputedStyle(document.documentElement).getPropertyValue("--home").trim(),
+      Sleep: getComputedStyle(document.documentElement).getPropertyValue("--sleep").trim()
+    };
+
+    function render(data) {
+      document.getElementById("subtitle").textContent =
+        `${data.company?.name ?? "-"} / ${data.frame?.time ?? "-"} ${data.frame?.phase ?? "-"}, city: ${data.company?.city ?? "-"}, nation: ${data.company?.nation ?? "-"}`;
+      document.getElementById("members").textContent = data.network?.members ?? 0;
+      document.getElementById("edges").textContent = data.network?.internalEdges ?? 0;
+      document.getElementById("avgWeight").textContent = Number(data.network?.avgInternalWeight ?? 0).toFixed(3);
+      document.getElementById("capital").textContent = Number(data.company?.capital ?? 0).toFixed(4);
+      document.getElementById("profit").textContent = Number(data.company?.profit ?? 0).toFixed(4);
+
+      const tbody = document.getElementById("topTable");
+      tbody.innerHTML = "";
+      const top = (data.network?.topConnectors ?? data.network?.nodes ?? []).slice(0, 20);
+      top.forEach((n, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i + 1}</td><td>${n.name}</td><td>${n.degree ?? 0}</td><td>${Number(n.strength ?? 0).toFixed(3)}</td><td>${n.state ?? "-"}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      const svg = document.getElementById("graph");
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      const W = 980;
+      const H = 620;
+      const cx = W / 2;
+      const cy = H / 2 + 10;
+      const R = 220;
+      const nodes = (data.network?.nodes ?? []).slice();
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      nodes.forEach((n, i) => {
+        const a = (Math.PI * 2 * i) / Math.max(1, nodes.length) - Math.PI / 2;
+        n.x = cx + Math.cos(a) * R;
+        n.y = cy + Math.sin(a) * R;
+        n.r = 6 + Math.max(0, Math.min(12, (Number(n.strength ?? 0) - 20) * 2.1));
+      });
+
+      (data.network?.edges ?? []).forEach((e) => {
+        const a = byId.get(e.from);
+        const b = byId.get(e.to);
+        if (!a || !b) return;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", a.x);
+        line.setAttribute("y1", a.y);
+        line.setAttribute("x2", b.x);
+        line.setAttribute("y2", b.y);
+        line.setAttribute("stroke", getComputedStyle(document.documentElement).getPropertyValue("--edge").trim());
+        line.setAttribute("stroke-width", (1.5 + Number(e.weight ?? 0) * 4.5).toFixed(2));
+        line.setAttribute("stroke-opacity", "0.7");
+        svg.appendChild(line);
+      });
+
+      nodes.forEach((n) => {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", n.x);
+        c.setAttribute("cy", n.y);
+        c.setAttribute("r", n.r.toFixed(1));
+        c.setAttribute("fill", stateColor[n.state] || "#666");
+        c.setAttribute("stroke", "#fff");
+        c.setAttribute("stroke-width", "1.5");
+        g.appendChild(c);
+
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", n.x);
+        t.setAttribute("y", n.y - n.r - 7);
+        t.setAttribute("font-size", "11");
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("fill", "#2c3f56");
+        t.textContent = n.name;
+        g.appendChild(t);
+        svg.appendChild(g);
+      });
+    }
+
+    loadData()
+      .then(render)
+      .catch((err) => {
+        document.getElementById("subtitle").textContent = `load error: ${err.message}`;
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "sphere-civilization-sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phase 1 foundation for emergent multi-layer sphere civilization simulation.",
+  "scripts": {
+    "start": "node src/main.js",
+    "start:web": "node scripts/serve.js",
+    "start:mcp": "node scripts/mcpServer.js",
+    "dev:all": "node scripts/devAll.js",
+    "notify:slack": "node scripts/slackNotifier.js",
+    "export:social-network": "node scripts/exportSocialNetwork.js",
+    "test:scenarios": "node scripts/scenarioTest.js",
+    "test:perf": "node scripts/perfTest.js",
+    "report:emergence": "node scripts/multiSeedReport.js",
+    "report:stratification": "node scripts/stratificationReport.js",
+    "report:geopolitics": "node scripts/geopoliticsTensionReport.js",
+    "report:clustered-init": "node scripts/clusteredInitScenario.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "three": "0.164.1"
+  }
+}

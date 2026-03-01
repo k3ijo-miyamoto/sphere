@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sphere Geopolitics Tension Check"
+  short_description: "Check interstate tension and war risk in Sphere"
+  default_prompt: "Use $sphere-geopolitics-tension-check to assess current interstate tension and war risk in Sphere."

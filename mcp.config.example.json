@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sphere-world": {
+      "command": "npm",
+      "args": ["run", "start:mcp"],
+      "cwd": "/home/hacker/Project/sphere"
+    }
+  }
+}

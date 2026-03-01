@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+mcp.config.json
+
+# Runtime snapshots / local state
+web/mcp_snapshot.json
+web/mcp_snapshot.json.*
+web/tool_audit.log
+
+# Local logs
+*.log
+
+# Generated reports / test artifacts
+clustered_init_report*.json
+multi_seed_report*.json
+stratification_report*.json
+geopolitics_tension_report*.json
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
