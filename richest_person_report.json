@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-03-02T04:31:27.763Z",
+  "source": {
+    "primary": "snapshot",
+    "snapshotPath": "/home/hacker/Project/sphere/web/mcp_snapshot.json",
+    "liveProfileChecked": false,
+    "liveProfileEndpoint": "http://127.0.0.1:5180/tool"
+  },
+  "frame": {
+    "time": "Day 102 06:30",
+    "phase": "Morning",
+    "worldVersion": 105
+  },
+  "population": 667,
+  "top": [
+    {
+      "personId": 836,
+      "name": "Ivo Morne 4",
+      "wealth": 0.713704,
+      "cash": 0.114768,
+      "realEstate": 1,
+      "stocks": 0.986263,
+      "bankDeposit": 1,
+      "debt": 0,
+      "age": 62.504,
+      "sex": "F",
+      "profession": "administration",
+      "employed": true,
+      "currentCityId": "C45",
+      "currentCityName": "Helio-N45",
+      "homeCityId": "C45",
+      "homeCityName": "Helio-N45",
+      "nationId": "N1",
+      "liveProfile": null
+    },
+    {
+      "personId": 226,
+      "name": "Alex Blake 2",
+      "wealth": 0.667582,
+      "cash": 0.088559,
+      "realEstate": 1,
+      "stocks": 0.824591,
+      "bankDeposit": 0.987962,
+      "debt": 0,
+      "age": 58.504,
+      "sex": "F",
+      "profession": "administration",
+      "employed": false,
+      "currentCityId": "C2",
+      "currentCityName": "Merca",
+      "homeCityId": "C37",
+      "homeCityName": "Helio-N37",
+      "nationId": "N1",
+      "liveProfile": null
+    },
+    {
+      "personId": 793,
+      "name": "Noa Takane 3",
+      "wealth": 0.617743,
+      "cash": 0.085215,
+      "realEstate": 1,
+      "stocks": 0.593065,
+      "bankDeposit": 1,
+      "debt": 0,
+      "age": 43.504,
+      "sex": "F",
+      "profession": "judiciary",
+      "employed": true,
+      "currentCityId": "C39",
+      "currentCityName": "Helio-N39",
+      "homeCityId": "C39",
+      "homeCityName": "Helio-N39",
+      "nationId": "N1",
+      "liveProfile": null
+    }
+  ]
+}

@@ -108,6 +108,7 @@ export class PopulationSystem {
       companies: this.companies,
       companiesByCity: this.companiesByCity,
       phase,
+      day,
       config: this.config,
       isWeekend,
       minuteOfDay,
@@ -383,6 +384,7 @@ function updateInstitutionalSystem({ people, world, config, rng, phase, day, sta
     schoolTotals: summarizeSchoolTotals(people),
     mutationCount: institutionState.mutationCount ?? 0,
     policyRevisionCount: institutionState.policyRevisionCount ?? 0,
+    policyRevisionRate: Number((institutionState.policyRevisionRate ?? 0).toFixed(4)),
     longTermStability: institutionState.longTermStability?.report ?? null,
     metaGovernance: {
       profile: institutionState.metaGovernance?.profile ?? "adaptive",
@@ -836,6 +838,10 @@ function ensureInstitutionState(world, config, rng) {
   world.systemState.institutions = world.systemState.institutions ?? {
     mutationCount: 0,
     policyRevisionCount: 0,
+    policyRevisionRate: 0,
+    policyRevisionHistory: [],
+    policyRevisionToday: 0,
+    lastRevisionDay: -1,
     lastSchoolOutcomeByCity: {},
     publicStaffRateOverride: null,
     longTermStability: {
@@ -876,6 +882,10 @@ function ensureInstitutionState(world, config, rng) {
   state.epsilon = clamp(config.institutions?.policyEpsilon ?? 0.12, 0.01, 0.45);
   state.mutationRate = clamp(config.institutions?.mutationRate ?? 0.08, 0, 0.4);
   state.publicStaffRateOverride = Number.isFinite(state.publicStaffRateOverride) ? state.publicStaffRateOverride : null;
+  state.policyRevisionRate = Number.isFinite(state.policyRevisionRate) ? state.policyRevisionRate : 0;
+  state.policyRevisionHistory = Array.isArray(state.policyRevisionHistory) ? state.policyRevisionHistory : [];
+  state.policyRevisionToday = Number.isFinite(state.policyRevisionToday) ? state.policyRevisionToday : 0;
+  state.lastRevisionDay = Number.isFinite(state.lastRevisionDay) ? state.lastRevisionDay : -1;
   state.lastSchoolOutcomeByCity = state.lastSchoolOutcomeByCity ?? {};
   state.longTermStability = state.longTermStability ?? { history: [], report: null, lastUpdatedDay: -1 };
   state.longTermStability.history = Array.isArray(state.longTermStability.history) ? state.longTermStability.history : [];
@@ -886,6 +896,28 @@ function ensureInstitutionState(world, config, rng) {
   state.metaGovernance.revisionCount = state.metaGovernance.revisionCount ?? 0;
   state.metaGovernance.lastRevisionDay = state.metaGovernance.lastRevisionDay ?? -1;
   return state;
+}
+
+function notePolicyRevision(institutionState, day) {
+  institutionState.policyRevisionCount += 1;
+  if (institutionState.lastRevisionDay !== day) {
+    if (institutionState.lastRevisionDay >= 0) {
+      institutionState.policyRevisionHistory.push({
+        day: institutionState.lastRevisionDay,
+        count: institutionState.policyRevisionToday ?? 0
+      });
+      if (institutionState.policyRevisionHistory.length > 240) {
+        institutionState.policyRevisionHistory.splice(0, institutionState.policyRevisionHistory.length - 240);
+      }
+    }
+    institutionState.lastRevisionDay = day;
+    institutionState.policyRevisionToday = 0;
+  }
+  institutionState.policyRevisionToday = (institutionState.policyRevisionToday ?? 0) + 1;
+  const recent = institutionState.policyRevisionHistory.slice(-30);
+  const denom = Math.max(1, recent.length + 1);
+  const sum = recent.reduce((s, r) => s + (r.count ?? 0), 0) + (institutionState.policyRevisionToday ?? 0);
+  institutionState.policyRevisionRate = Number((sum / denom).toFixed(4));
 }
 
 function updateEducationPolicies({ world, config, institutionState, schoolOutcomeByCity, day, rng }) {
@@ -922,7 +954,7 @@ function updateEducationPolicies({ world, config, institutionState, schoolOutcom
     edu.currentAction = nextAction;
     edu.levers = educationActionToLevers(nextAction);
     edu.lastRevisionDay = day;
-    institutionState.policyRevisionCount += 1;
+    notePolicyRevision(institutionState, day);
   }
 }
 
@@ -949,7 +981,7 @@ function updateInstitutionPolicies({ world, config, institutionState, day, rng }
     cityState.currentAction = nextAction;
     cityState.weights = actionToBudgetWeights(nextAction);
     cityState.lastObservedReward = reward;
-    institutionState.policyRevisionCount += 1;
+    notePolicyRevision(institutionState, day);
 
     if (rng.next() < institutionState.mutationRate) {
       mutateInstitutionWeights(cityState, rng);
@@ -1407,6 +1439,7 @@ function applyEmploymentAndEconomy({
   companies,
   companiesByCity,
   phase,
+  day,
   config,
   isWeekend,
   minuteOfDay,
@@ -1448,18 +1481,48 @@ function applyEmploymentAndEconomy({
     }
   }
 
+  const employmentDiag = {
+    sampledWorkers: 0,
+    baseHireShareSum: 0,
+    baseHireShareEffectiveSum: 0,
+    shockPenaltySum: 0,
+    strainPenaltySum: 0,
+    regimeHiringMultSum: 0,
+    policySupportSum: 0,
+    capacityRatioSum: 0,
+    hireChanceSum: 0,
+    baseHireShareEffectiveSamples: []
+  };
   for (const city of world.cities) {
     const workers = workersByCity.get(city.id) ?? [];
     const cityCompanies = companiesByCity.get(city.id) ?? [];
     const companyCapacity = cityCompanies.reduce((sum, c) => sum + c.capacity, 0);
+    const targetCityId = config?.policy?.targetEmploymentCityId ? String(config.policy.targetEmploymentCityId) : null;
+    const baseEmploymentBoost = clamp(config?.policy?.targetEmploymentBoost ?? 0, 0, 0.25);
+    const boostTicksLimit = Math.max(0, Math.floor(config?.policy?.targetEmploymentBoostTicks ?? 0));
+    const ticksPerDay = Math.max(1, Math.floor((config?.dayMinutes ?? 1440) / (config?.tickMinutes ?? 30)));
+    const tickOfDay = Math.max(0, Math.floor(minuteOfDay / Math.max(1, config?.tickMinutes ?? 30)));
+    const globalTick = Math.max(0, day * ticksPerDay + tickOfDay);
+    const boostInWindow = boostTicksLimit <= 0 || globalTick <= boostTicksLimit;
+    const boostRegimeOnly = config?.policy?.targetEmploymentBoostRegimeOnly !== false;
+    const cityCapacityBoost =
+      targetCityId && city.id === targetCityId && boostInWindow && (!boostRegimeOnly || city.regime === "stressed" || city.regime === "fractured")
+        ? clamp(
+            baseEmploymentBoost *
+              (0.7 + (config?.policy?.welfareBudget ?? 0.5) * 0.2 + (config?.policy?.safetyBudget ?? 0.5) * 0.1),
+            0,
+            0.32
+          )
+        : 0;
     const cityBaseCapacity =
       cityCompanies.length > 0
         ? Math.max(1, Math.floor(companyCapacity * city.population * 0.06))
         : Math.max(1, Math.floor(city.population * (city.metrics.employmentCapacity ?? 0.6) * 0.08));
+    const boostedCityBaseCapacity = Math.max(1, Math.floor(cityBaseCapacity * (1 + cityCapacityBoost)));
     const companyOpenings = computeCompanyOpenPositions({
       cityCompanies,
       city,
-      cityBaseCapacity,
+      cityBaseCapacity: boostedCityBaseCapacity,
       workerCount: workers.length,
       epidemic,
       climate
@@ -1483,7 +1546,49 @@ function applyEmploymentAndEconomy({
       const baseHire = i < capacity ? 1 : 0;
       const shock = (world.systemState?.epidemicLevel ?? 0) * 0.08 + (world.systemState?.climateStress ?? 0) * 0.05;
       const rehireBoost = Math.min(0.16, worker.employmentHistory.unemploymentStreak * 0.012);
-      const hireChance = baseHire === 1 ? 0.92 - shock + rehireBoost : Math.max(0.01, 0.08 + rehireBoost - shock);
+      const regimeFx = getCityRegimeEffects(city, config);
+      const regime = city.regime ?? "normal";
+      const regimeMult = clamp(
+        config?.employment?.baseHireShareRegimeMult?.[regime] ??
+          config?.employment?.baseHireShareRegimeMult?.normal ??
+          1,
+        0.65,
+        1.25
+      );
+      const baseHireShareFloor = clamp(config?.employment?.baseHireShareFloor ?? 0.08, 0.01, 0.3);
+      const policyCoupling = clamp(config?.employment?.baseHirePolicyCoupling ?? 0.12, 0, 0.5);
+      const stabilityCoupling = clamp(config?.employment?.baseHireStabilityCoupling ?? 0.08, 0, 0.3);
+      const cityPolicySupport =
+        targetCityId && city.id === targetCityId && boostInWindow && (!boostRegimeOnly || city.regime === "stressed" || city.regime === "fractured")
+          ? clamp(
+              baseEmploymentBoost *
+                (0.6 + (config?.policy?.welfareBudget ?? 0.5) * 0.25 + (config?.policy?.safetyBudget ?? 0.5) * 0.15),
+              0,
+              0.28
+            )
+          : 0;
+      const stabilityFactor = clamp(1 + ((city.metrics?.safety ?? 0.5) - (city.metrics?.instabilityRisk ?? 0.3)) * stabilityCoupling, 0.85, 1.2);
+      let baseHireShareEffective = clamp(baseHire * regimeMult * (1 + cityPolicySupport * policyCoupling) * stabilityFactor, 0, 1);
+      if (baseHire === 0) {
+        baseHireShareEffective = baseHireShareFloor;
+      } else {
+        baseHireShareEffective = Math.max(baseHireShareFloor, baseHireShareEffective);
+      }
+      const hireChanceBase = Math.max(0.01, 0.08 + 0.84 * baseHireShareEffective + rehireBoost - shock);
+      const strainPenalty = (city.strain ?? 0) * 0.15;
+      const hireChance = clamp01(
+        hireChanceBase * regimeFx.hiringRecoveryMult * (1 - strainPenalty) + cityPolicySupport
+      );
+      employmentDiag.sampledWorkers += 1;
+      employmentDiag.baseHireShareSum += baseHire;
+      employmentDiag.baseHireShareEffectiveSum += baseHireShareEffective;
+      employmentDiag.shockPenaltySum += shock;
+      employmentDiag.strainPenaltySum += strainPenalty;
+      employmentDiag.regimeHiringMultSum += regimeFx.hiringRecoveryMult;
+      employmentDiag.policySupportSum += cityPolicySupport;
+      employmentDiag.capacityRatioSum += capacity / Math.max(1, workers.length);
+      employmentDiag.hireChanceSum += hireChance;
+      employmentDiag.baseHireShareEffectiveSamples.push(baseHireShareEffective);
       worker.employed = rng.next() < clamp01(hireChance);
       if (!worker.employed) {
         worker.employmentHistory.unemploymentStreak += 1;
@@ -1505,6 +1610,24 @@ function applyEmploymentAndEconomy({
       }
     }
   }
+  if (employmentDiag.sampledWorkers > 0) {
+    const n = employmentDiag.sampledWorkers;
+    const sortedEffective = employmentDiag.baseHireShareEffectiveSamples.slice().sort((a, b) => a - b);
+    const p95Idx = Math.max(0, Math.min(sortedEffective.length - 1, Math.floor((sortedEffective.length - 1) * 0.95)));
+    world.systemState = world.systemState ?? {};
+    world.systemState.lastEmploymentDiagnostics = {
+      sampledWorkers: n,
+      avgBaseHireShare: Number((employmentDiag.baseHireShareSum / n).toFixed(6)),
+      avgBaseHireShareEffective: Number((employmentDiag.baseHireShareEffectiveSum / n).toFixed(6)),
+      p95BaseHireShareEffective: Number(((sortedEffective[p95Idx] ?? 0)).toFixed(6)),
+      avgShockPenalty: Number((employmentDiag.shockPenaltySum / n).toFixed(6)),
+      avgStrainPenalty: Number((employmentDiag.strainPenaltySum / n).toFixed(6)),
+      avgRegimeHiringMult: Number((employmentDiag.regimeHiringMultSum / n).toFixed(6)),
+      avgPolicySupport: Number((employmentDiag.policySupportSum / n).toFixed(6)),
+      avgCapacityRatio: Number((employmentDiag.capacityRatioSum / n).toFixed(6)),
+      avgHireChance: Number((employmentDiag.hireChanceSum / n).toFixed(6))
+    };
+  }
 
   const companyById = new Map(companies.map((c) => [c.id, c]));
   const sectorCrowdByCity = new Map();
@@ -1519,6 +1642,8 @@ function applyEmploymentAndEconomy({
 
   const supplyEfficiencyBoost = buildSupplyBoostMap(companies, companyById, supplyChainEffect);
   const learningRate = config.economy?.skillLearningRate ?? 0.012;
+  const salaryWealthEma = clamp(config.economy?.salaryWealthEma ?? 0.08, 0.01, 0.6);
+  const salaryWealthScale = Math.max(0.01, Number(config.economy?.salaryWealthScale ?? 0.45));
   for (const person of people) {
     ensureSocioeconomicBreakdown(person);
     const city = world.getCityById(person.currentCityId);
@@ -1546,6 +1671,8 @@ function applyEmploymentAndEconomy({
       income,
       marketIndex,
       currencyCtx,
+      salaryWealthEma,
+      salaryWealthScale,
       config,
       rng
     });
@@ -1595,15 +1722,60 @@ function applyEmploymentAndEconomy({
   }
 
   const cityRevenue = new Map();
+  const valuationCfg = config.company?.valuation ?? {};
+  const hyperGrowthCfg = config.company?.hyperGrowth ?? {};
   for (const company of companies) {
+    const companyCity = world.getCityById(company.cityId);
+    const regimeFx = getCityRegimeEffects(companyCity, config);
     const fixedCost = 0.08 + company.capacity * 0.06;
+    const prevValuation = Math.max(0.0001, Number(company.valuation ?? company.capital ?? 0.3));
     company.revenue = company.revenue * 0.82 + company.revenueTick * 0.18;
-    company.cost = company.cost * 0.82 + (company.costTick + fixedCost) * 0.18;
+    company.cost = company.cost * 0.82 + (company.costTick + fixedCost * (2 - regimeFx.hiringRecoveryMult)) * 0.18;
     company.profit = company.revenue - company.cost;
-    company.capital = clamp01(company.capital + company.profit * 0.01);
+    const recoveryDrag = 1 - clamp((companyCity?.strain ?? 0) * 0.35, 0, 0.45);
+    company.capital = clamp01(company.capital + company.profit * 0.01 * regimeFx.hiringRecoveryMult * recoveryDrag);
     const trend = (company.profit - (company.profitPrev ?? 0)) * 0.2 + company.capital * 0.03;
     const noise = (rng.next() - 0.5) * stockVolatility;
-    company.stockPrice = Math.max(0.4, (company.stockPrice ?? 1) * (1 + trend + noise));
+    const baseCapitalWeight = Math.max(0.2, Number(valuationCfg.baseCapitalWeight ?? 1.7));
+    const baseRevenueWeight = Math.max(0.1, Number(valuationCfg.baseRevenueWeight ?? 0.45));
+    const profitScale = Math.max(0.5, Number(valuationCfg.profitScale ?? 4));
+    const growthScale = Math.max(0.5, Number(valuationCfg.growthScale ?? 1.35));
+    const lossPenaltyScale = Math.max(0.3, Number(valuationCfg.lossPenaltyScale ?? 2.6));
+    const valMin = Math.max(0.01, Number(valuationCfg.min ?? 0.05));
+    const valMax = Math.max(valMin + 0.5, Number(valuationCfg.max ?? 6));
+    const positiveProfit = Math.max(0, Number(company.profit ?? 0));
+    const loss = Math.max(0, Number(-(company.profit ?? 0)));
+    const profitDelta = Number(company.profit ?? 0) - Number(company.profitPrev ?? 0);
+    const profitSignal = 1 / (1 + Math.exp(-positiveProfit * 4.2));
+    const trendSignal = 1 / (1 + Math.exp(-profitDelta * 7.5));
+    const prevGrowthExpectation = clamp01(company.growthExpectation ?? 0.5);
+    company.growthExpectation = clamp01(prevGrowthExpectation * 0.78 + (profitSignal * 0.62 + trendSignal * 0.38) * 0.22);
+    const baseValuation = Math.max(
+      valMin,
+      Number(company.capital ?? 0) * baseCapitalWeight + Math.max(0, Number(company.revenue ?? 0)) * baseRevenueWeight
+    );
+    const nonlinear = Math.pow(1 + positiveProfit * profitScale, 1.08) * (1 + Math.pow(company.growthExpectation, growthScale));
+    const lossDrag = 1 + loss * lossPenaltyScale;
+    let valuation = baseValuation * nonlinear / lossDrag;
+
+    const baseHyperChance = clamp(Number(hyperGrowthCfg.chance ?? 0.003), 0, 0.05);
+    const hyperChance = baseHyperChance * clamp(0.6 + company.growthExpectation * 0.9 + positiveProfit * 0.6, 0.5, 2.2);
+    company.hyperGrowthEvent = false;
+    if (rng.next() < hyperChance) {
+      const minMult = Math.max(1.05, Number(hyperGrowthCfg.minMultiplier ?? 1.8));
+      const maxMult = Math.max(minMult + 0.1, Number(hyperGrowthCfg.maxMultiplier ?? 3.6));
+      company.hyperGrowthBoost = Math.max(company.hyperGrowthBoost ?? 1, rng.range(minMult, maxMult));
+      company.lastHyperGrowthDay = day;
+      company.hyperGrowthEvent = true;
+    }
+    if ((company.hyperGrowthBoost ?? 1) > 1.001) {
+      valuation *= company.hyperGrowthBoost;
+      const decay = clamp(Number(hyperGrowthCfg.boostDecay ?? 0.9), 0.65, 0.99);
+      company.hyperGrowthBoost = clamp(1 + (company.hyperGrowthBoost - 1) * decay, 1, 12);
+    }
+    company.valuation = clamp(valuation, valMin, valMax * 4);
+    const valuationReturn = (company.valuation - prevValuation) / Math.max(0.0001, prevValuation);
+    company.stockPrice = Math.max(0.4, (company.stockPrice ?? 1) * (1 + trend + noise + valuationReturn * 0.16));
     company.profitPrev = company.profit;
     cityRevenue.set(company.cityId, (cityRevenue.get(company.cityId) ?? 0) + Math.max(0.0001, company.revenue));
   }
@@ -1618,11 +1790,11 @@ function applyEmploymentAndEconomy({
 
   simulateCompanyInvestments({ people, companies, world, rng, phase });
   simulateCorporateCrossHoldings({ companies, world, rng, phase });
-  simulateInstitutionalInvestments({ companies, world, rng, phase, config });
+  simulateInstitutionalInvestments({ companies, world, rng, phase, day, config });
   for (const company of companies) {
     normalizeCapTable(company);
   }
-  syncPersonStockAssetsFromHoldings(people, companies);
+  syncPersonStockAssetsFromHoldings(people, companies, config);
 }
 
 function computeCityResourceEconomyProfile(city, prices) {
@@ -1816,6 +1988,8 @@ function ensureRlPolicyState(target, actionSpace, fallback = "balanced") {
   target.rlPolicy = target.rlPolicy ?? {};
   target.rlPolicy.qByAction = target.rlPolicy.qByAction ?? {};
   target.rlPolicy.nByAction = target.rlPolicy.nByAction ?? {};
+  target.rlPolicy.qByStateAction = target.rlPolicy.qByStateAction ?? {};
+  target.rlPolicy.nByStateAction = target.rlPolicy.nByStateAction ?? {};
   for (const a of actionSpace) {
     if (!Number.isFinite(target.rlPolicy.qByAction[a])) {
       target.rlPolicy.qByAction[a] = 0.5;
@@ -1825,17 +1999,40 @@ function ensureRlPolicyState(target, actionSpace, fallback = "balanced") {
     }
   }
   target.rlPolicy.lastAction = target.rlPolicy.lastAction ?? fallback;
+  target.rlPolicy.lastStateKey = target.rlPolicy.lastStateKey ?? "global";
   return target.rlPolicy;
 }
 
-function chooseRlAction(policy, actionSpace, epsilon, rng) {
+function stateActionKey(stateKey, action) {
+  return `${stateKey}::${action}`;
+}
+
+function getPolicyQ(policy, stateKey, action) {
+  const stateQ = policy.qByStateAction?.[stateActionKey(stateKey, action)];
+  if (Number.isFinite(stateQ)) {
+    return stateQ;
+  }
+  return policy.qByAction?.[action] ?? 0.5;
+}
+
+function updatePolicyQ(policy, stateKey, action, reward, alpha) {
+  const key = stateActionKey(stateKey, action);
+  const prevStateQ = Number.isFinite(policy.qByStateAction[key]) ? policy.qByStateAction[key] : getPolicyQ(policy, stateKey, action);
+  policy.qByStateAction[key] = Number((prevStateQ + alpha * (reward - prevStateQ)).toFixed(6));
+  policy.nByStateAction[key] = (policy.nByStateAction[key] ?? 0) + 1;
+  const prevGlobalQ = policy.qByAction[action] ?? 0.5;
+  policy.qByAction[action] = Number((prevGlobalQ + alpha * (reward - prevGlobalQ)).toFixed(6));
+  policy.nByAction[action] = (policy.nByAction[action] ?? 0) + 1;
+}
+
+function chooseRlAction(policy, actionSpace, epsilon, rng, stateKey = "global") {
   if (rng.next() < epsilon) {
     return actionSpace[Math.floor(rng.range(0, actionSpace.length))];
   }
   let best = actionSpace[0];
   let bestQ = -Infinity;
   for (const a of actionSpace) {
-    const q = policy.qByAction[a] ?? 0;
+    const q = getPolicyQ(policy, stateKey, a);
     if (q > bestQ) {
       bestQ = q;
       best = a;
@@ -1844,12 +2041,22 @@ function chooseRlAction(policy, actionSpace, epsilon, rng) {
   return best;
 }
 
+function companyStateKey(company) {
+  const profitBand = band3((company.profit ?? 0) + 0.3, 0.2, 0.55);
+  const distressBand = band3(company.distress ?? 0.2, 0.28, 0.56);
+  const capitalBand = band3(company.capital ?? 0.45, 0.3, 0.62);
+  const shareBand = band3((company.marketShare ?? 0) / 100, 0.2, 0.45);
+  return `p${profitBand}|d${distressBand}|k${capitalBand}|m${shareBand}`;
+}
+
 function applyCompanyRlActions({ companies, config, rng }) {
   const eps = clamp(config.rl?.companyEpsilon ?? config.rl?.epsilon ?? 0.12, 0.01, 0.45);
   for (const c of companies) {
     const policy = ensureRlPolicyState(c, COMPANY_RL_ACTIONS, "balanced");
-    const action = chooseRlAction(policy, COMPANY_RL_ACTIONS, eps, rng);
+    const stateKey = companyStateKey(c);
+    const action = chooseRlAction(policy, COMPANY_RL_ACTIONS, eps, rng, stateKey);
     policy.lastAction = action;
+    policy.lastStateKey = stateKey;
     if (action === "margin_focus") {
       c.pricePower = clamp((c.pricePower ?? 1) * 1.03, 0.7, 2);
       c.wageMultiplier = clamp((c.wageMultiplier ?? 1) * 0.98, 0.65, 1.8);
@@ -1874,18 +2081,23 @@ function updateCompanyRlLearning({ companies, config, phase }) {
   if (phase !== "Daytime") {
     return;
   }
-  const alpha = clamp(config.rl?.alpha ?? 0.12, 0.01, 0.5);
+  const alpha = clamp(config.rl?.companyAlpha ?? config.rl?.alpha ?? 0.12, 0.01, 0.5);
   for (const c of companies) {
     const policy = ensureRlPolicyState(c, COMPANY_RL_ACTIONS, "balanced");
     const action = policy.lastAction ?? "balanced";
+    const stateKey = policy.lastStateKey ?? companyStateKey(c);
+    const employmentStability = clamp01((c.employeeCount ?? 0) / Math.max(1, c.capacity * 8));
     const reward = clamp(
-      (c.profit ?? 0) * 2.1 + (c.marketShare ?? 0) * 0.008 + (c.capital ?? 0) * 0.28 - (c.distress ?? 0) * 0.45 + (c.employeeCount > 0 ? 0.03 : -0.05),
+      (c.profit ?? 0) * 2.1 +
+        (c.marketShare ?? 0) * 0.008 +
+        (c.capital ?? 0) * 0.28 -
+        (c.distress ?? 0) * 0.5 +
+        employmentStability * 0.22 +
+        (c.employeeCount > 0 ? 0.03 : -0.08),
       -1,
       2
     );
-    const prevQ = policy.qByAction[action] ?? 0.5;
-    policy.qByAction[action] = Number((prevQ + alpha * (reward - prevQ)).toFixed(6));
-    policy.nByAction[action] = (policy.nByAction[action] ?? 0) + 1;
+    updatePolicyQ(policy, stateKey, action, reward, alpha);
   }
 }
 
@@ -1943,17 +2155,18 @@ function ensureSocioeconomicBreakdown(person) {
   s.stocks = clamp01(Number.isFinite(s.stocks) ? s.stocks : baseWealth * 0.23);
   s.bankDeposit = clamp01(Number.isFinite(s.bankDeposit) ? s.bankDeposit : baseWealth * 0.18);
   s.debt = clamp01(Number.isFinite(s.debt) ? s.debt : baseWealth * 0.06);
+  s.salaryWealth = clamp01(Number.isFinite(s.salaryWealth) ? s.salaryWealth : baseWealth * 0.45);
+  s.equityWealth = clamp01(Number.isFinite(s.equityWealth) ? s.equityWealth : s.stocks ?? baseWealth * 0.23);
+  s.wealthRaw = Number.isFinite(s.wealthRaw) ? s.wealthRaw : s.salaryWealth + s.equityWealth;
   s.wealth = computeSocioeconomicWealth(s);
 }
 
 function computeSocioeconomicWealth(s) {
-  return clamp01(
-    (s.cash ?? 0) * 0.32 +
-      (s.realEstate ?? 0) * 0.28 +
-      (s.stocks ?? 0) * 0.22 +
-      (s.bankDeposit ?? 0) * 0.18 -
-      (s.debt ?? 0) * 0.25
-  );
+  const salary = clamp01(s.salaryWealth ?? 0);
+  const equity = clamp01(s.equityWealth ?? 0);
+  const wealthRaw = Math.max(0, salary + equity);
+  s.wealthRaw = Number(wealthRaw.toFixed(6));
+  return clamp01(wealthRaw);
 }
 
 function getCurrencyContextForCity(city, currencyState) {
@@ -1965,7 +2178,17 @@ function getCurrencyContextForCity(city, currencyState) {
   return { nationId, fx, inflation, policyRate, purchasingPower };
 }
 
-function applyPersonalAssetDynamics({ person, city, income, marketIndex, currencyCtx, config, rng }) {
+function applyPersonalAssetDynamics({
+  person,
+  city,
+  income,
+  marketIndex,
+  currencyCtx,
+  salaryWealthEma,
+  salaryWealthScale,
+  config,
+  rng
+}) {
   const s = person.socioeconomic;
   const incomeFlow = Math.max(0, income) * 0.004;
   const inflationCost = 1 + (currencyCtx?.inflation ?? 0.012) * 0.6;
@@ -2019,6 +2242,9 @@ function applyPersonalAssetDynamics({ person, city, income, marketIndex, currenc
     s.cash = clamp01((s.cash ?? 0) - repay);
     s.debt = clamp01((s.debt ?? 0) - repay);
   }
+  const salarySignal = clamp01(Math.max(0, income) * salaryWealthScale);
+  const baseSalaryWealth = Number.isFinite(s.salaryWealth) ? s.salaryWealth : salarySignal;
+  s.salaryWealth = clamp01(baseSalaryWealth * (1 - salaryWealthEma) + salarySignal * salaryWealthEma);
 }
 
 function computeNightEncounters({ phase, people, world, baseRate }) {
@@ -2529,12 +2755,39 @@ function applyRelocationMigration({
   if (phase !== "Night") {
     return;
   }
+  world.systemState = world.systemState ?? {};
+  world.systemState.migrationFlows = world.systemState.migrationFlows ?? {
+    day: -1,
+    pairDaily: {},
+    pairEma: {}
+  };
+  if (world.systemState.migrationFlows.day !== day) {
+    world.systemState.migrationFlows.day = day;
+    world.systemState.migrationFlows.pairDaily = {};
+    for (const key of Object.keys(world.systemState.migrationFlows.pairEma)) {
+      world.systemState.migrationFlows.pairEma[key] = Number((world.systemState.migrationFlows.pairEma[key] * 0.94).toFixed(6));
+    }
+  }
+  world.systemState.migrationRegimeStats = world.systemState.migrationRegimeStats ?? {
+    day: -1,
+    attemptsByRegime: { normal: 0, stressed: 0, fractured: 0 },
+    movesByRegime: { normal: 0, stressed: 0, fractured: 0 }
+  };
+  if (world.systemState.migrationRegimeStats.day !== day) {
+    world.systemState.migrationRegimeStats = {
+      day,
+      attemptsByRegime: { normal: 0, stressed: 0, fractured: 0 },
+      movesByRegime: { normal: 0, stressed: 0, fractured: 0 }
+    };
+  }
   const banditConfig = {
     enabled: true,
     learningRate: 0.12,
+    forgetting: 0.02,
     epsilon: 0.08,
     explorationBonus: 0.06,
     utilityWeight: 0.82,
+    useContext: true,
     ...banditOverrides
   };
   const cityIds = world.cities.map((c) => c.id);
@@ -2545,18 +2798,37 @@ function applyRelocationMigration({
     person.mobility = ensureMobilityModel(person.mobility);
     const cooldownPenalty = day - person.mobility.lastMoveDay < 4 ? 0.45 : 1;
     const fatiguePenalty = 1 - person.fatigue * 0.2;
+    const homeCity = world.getCityById(person.homeCityId);
+    const regimeMult =
+      homeCity?.regime === "fractured" ? 1.55
+      : homeCity?.regime === "stressed" ? 1.22
+      : 1;
+    const strainMult = 1 + clamp(homeCity?.strain ?? 0, 0, 1) * 0.28;
     const migrationDrive = sigmoid((person.traits.noveltySeeking - 0.45) * 2.2) * (0.7 + person.traits.openness * 0.6);
-    if (rng.next() > baseRate * migrationDrive * cooldownPenalty * fatiguePenalty) {
+    const baseMigration = baseRate * migrationDrive * cooldownPenalty * fatiguePenalty * regimeMult * strainMult;
+    const moveT = 0.48;
+    const moveSlope = 0.12;
+    const panicBase = 0.18 * sigmoid(((homeCity?.strain ?? 0) - moveT) / moveSlope);
+    const panicRegimeMult =
+      homeCity?.regime === "fractured" ? 2
+      : homeCity?.regime === "stressed" ? 1.45
+      : 1;
+    const panicMigration = panicBase * panicRegimeMult;
+    const moveProb = clamp(baseMigration + panicMigration, 0, 0.92);
+    const homeRegime = homeCity?.regime ?? "normal";
+    world.systemState.migrationRegimeStats.attemptsByRegime[homeRegime] =
+      (world.systemState.migrationRegimeStats.attemptsByRegime[homeRegime] ?? 0) + 1;
+    if (rng.next() > moveProb) {
       continue;
     }
 
-    const current = world.getCityById(person.homeCityId);
+    const current = homeCity;
     const currentUtility = cityUtility(current, person, world, religionByCity, religionCompatibilityWeight);
     person.mobility.homeSatisfaction = person.mobility.homeSatisfaction * 0.82 + currentUtility * 0.18;
 
     let bestId = person.homeCityId;
     let bestUtility = currentUtility;
-    let bestScore = migrationBanditScore(person, person.homeCityId, currentUtility, banditConfig);
+    let bestScore = migrationBanditScore(person, person.homeCityId, currentUtility, current, banditConfig);
     for (const cityId of cityIds) {
       if (cityId === person.homeCityId) {
         continue;
@@ -2568,7 +2840,7 @@ function applyRelocationMigration({
       const util = cityUtility(city, person, world, religionByCity, religionCompatibilityWeight);
       const affinity = person.mobility.cityAffinity[cityId] ?? 0;
       const inertia = person.homeCityId === cityId ? 0.04 : 0;
-      const score = migrationBanditScore(person, cityId, util + affinity * 0.05, banditConfig) - inertia;
+      const score = migrationBanditScore(person, cityId, util + affinity * 0.05, city, banditConfig) - inertia;
       if (score > bestScore + 0.06) {
         bestScore = score;
         bestUtility = util;
@@ -2588,19 +2860,60 @@ function applyRelocationMigration({
         }
       }
     }
+    if (bestId === person.homeCityId && panicMigration > 0.07) {
+      const panicCandidates = cityIds
+        .filter((cityId) => cityId !== person.homeCityId && world.hasTransitPath(person.homeCityId, cityId))
+        .map((cityId) => {
+          const city = world.getCityById(cityId);
+          const util = cityUtility(city, person, world, religionByCity, religionCompatibilityWeight);
+          const relative = util - currentUtility;
+          return { cityId, util, relative };
+        })
+        .sort((a, b) => b.util - a.util)
+        .slice(0, 5);
+      if (panicCandidates.length > 0) {
+        const temp = clamp(0.16 + (1 - panicMigration) * 0.22, 0.08, 0.4);
+        const weights = panicCandidates.map((row) => Math.exp(row.relative / temp));
+        const wsum = weights.reduce((s, w) => s + w, 0) || 1;
+        let roll = rng.next() * wsum;
+        let selected = panicCandidates[0];
+        for (let i = 0; i < panicCandidates.length; i += 1) {
+          roll -= weights[i];
+          if (roll <= 0) {
+            selected = panicCandidates[i];
+            break;
+          }
+        }
+        if (selected) {
+          bestId = selected.cityId;
+          bestUtility = selected.util;
+        }
+      }
+    }
 
     if (bestId !== person.homeCityId) {
-      updateMigrationBandit(person, bestId, bestUtility, banditConfig);
+      const prevHome = person.homeCityId;
+      updateMigrationBandit(person, bestId, bestUtility, world.getCityById(bestId), banditConfig);
       person.mobility.lastMoveDay = day;
       person.mobility.moveCount += 1;
       person.mobility.cityAffinity[bestId] = clamp01((person.mobility.cityAffinity[bestId] ?? 0.35) + 0.08);
       person.mobility.cityAffinity[person.homeCityId] = clamp01((person.mobility.cityAffinity[person.homeCityId] ?? 0.4) - 0.04);
       person.homeCityId = bestId;
+      const fromNation = world.getCityById(prevHome)?.nationId ?? null;
+      const toNation = world.getCityById(bestId)?.nationId ?? null;
+      if (fromNation && toNation && fromNation !== toNation) {
+        const key = fromNation < toNation ? `${fromNation}|${toNation}` : `${toNation}|${fromNation}`;
+        world.systemState.migrationFlows.pairDaily[key] = (world.systemState.migrationFlows.pairDaily[key] ?? 0) + 1;
+        const prevFlow = world.systemState.migrationFlows.pairEma[key] ?? 0;
+        world.systemState.migrationFlows.pairEma[key] = Number((prevFlow * 0.86 + 0.14).toFixed(6));
+      }
+      world.systemState.migrationRegimeStats.movesByRegime[homeRegime] =
+        (world.systemState.migrationRegimeStats.movesByRegime[homeRegime] ?? 0) + 1;
       if (person.currentState === "Home" || person.currentState === "Sleep") {
         person.currentCityId = bestId;
       }
     } else {
-      updateMigrationBandit(person, person.homeCityId, currentUtility, banditConfig);
+      updateMigrationBandit(person, person.homeCityId, currentUtility, current, banditConfig);
       person.mobility.cityAffinity[person.homeCityId] = clamp01((person.mobility.cityAffinity[person.homeCityId] ?? 0.4) + 0.02);
     }
   }
@@ -2612,33 +2925,66 @@ function ensureMobilityModel(mobility) {
   safe.moveCount = Number.isFinite(safe.moveCount) ? safe.moveCount : 0;
   safe.homeSatisfaction = Number.isFinite(safe.homeSatisfaction) ? safe.homeSatisfaction : 0.5;
   safe.cityAffinity = safe.cityAffinity ?? {};
-  safe.bandit = safe.bandit ?? { qByCity: {}, nByCity: {} };
+  safe.bandit = safe.bandit ?? { qByCity: {}, nByCity: {}, qByStateAction: {}, nByStateAction: {} };
   safe.bandit.qByCity = safe.bandit.qByCity ?? {};
   safe.bandit.nByCity = safe.bandit.nByCity ?? {};
+  safe.bandit.qByStateAction = safe.bandit.qByStateAction ?? {};
+  safe.bandit.nByStateAction = safe.bandit.nByStateAction ?? {};
   return safe;
 }
 
-function migrationBanditScore(person, cityId, utility, config) {
+function migrationContextKey(person, city) {
+  const wageBand = band3(city?.metrics?.wageLevel ?? 0.8, 0.7, 1.1);
+  const costBand = band3(city?.metrics?.costOfLiving ?? 0.9, 0.85, 1.15);
+  const safetyBand = band3(city?.metrics?.safety ?? 0.6, 0.45, 0.72);
+  const trustBand = band3(city?.metrics?.trust ?? 0.6, 0.45, 0.72);
+  const opennessBand = band3(person?.traits?.openness ?? 0.5, 0.35, 0.65);
+  const riskBand = band3(person?.traits?.noveltySeeking ?? 0.5, 0.35, 0.65);
+  return `w${wageBand}|c${costBand}|s${safetyBand}|t${trustBand}|o${opennessBand}|r${riskBand}`;
+}
+
+function migrationBanditScore(person, cityId, utility, city, config) {
   if (!config.enabled) {
     return utility;
   }
+  person.mobility = ensureMobilityModel(person.mobility);
   const q = person.mobility?.bandit?.qByCity?.[cityId] ?? 0;
+  const stateKey = config.useContext ? migrationContextKey(person, city) : "global";
+  const stateActionKey = `${stateKey}::${cityId}`;
+  const qState = person.mobility?.bandit?.qByStateAction?.[stateActionKey] ?? q;
   const n = person.mobility?.bandit?.nByCity?.[cityId] ?? 0;
+  const nState = person.mobility?.bandit?.nByStateAction?.[stateActionKey] ?? n;
   const bonus = config.explorationBonus / Math.sqrt(n + 1);
-  return utility * config.utilityWeight + q + bonus;
+  const contextualBonus = config.explorationBonus / Math.sqrt(nState + 1);
+  return utility * config.utilityWeight + qState * 0.7 + q * 0.3 + bonus * 0.35 + contextualBonus * 0.65;
 }
 
-function updateMigrationBandit(person, cityId, reward, config) {
+function updateMigrationBandit(person, cityId, reward, city, config) {
   if (!config.enabled) {
     return;
   }
   person.mobility = ensureMobilityModel(person.mobility);
+  const forgetting = clamp(config.forgetting ?? 0, 0, 0.25);
+  if (forgetting > 0) {
+    for (const k of Object.keys(person.mobility.bandit.qByCity)) {
+      person.mobility.bandit.qByCity[k] = Number((person.mobility.bandit.qByCity[k] * (1 - forgetting)).toFixed(4));
+    }
+  }
   const qPrev = person.mobility.bandit.qByCity[cityId] ?? reward;
   const nPrev = person.mobility.bandit.nByCity[cityId] ?? 0;
   const alpha = clamp(config.learningRate, 0.01, 0.8);
   const qNext = qPrev + alpha * (reward - qPrev);
   person.mobility.bandit.qByCity[cityId] = Number(qNext.toFixed(4));
   person.mobility.bandit.nByCity[cityId] = nPrev + 1;
+  if (config.useContext) {
+    const stateKey = migrationContextKey(person, city);
+    const stateActionKey = `${stateKey}::${cityId}`;
+    const qCtxPrev = person.mobility.bandit.qByStateAction[stateActionKey] ?? qPrev;
+    const nCtxPrev = person.mobility.bandit.nByStateAction[stateActionKey] ?? 0;
+    const qCtxNext = qCtxPrev + alpha * (reward - qCtxPrev);
+    person.mobility.bandit.qByStateAction[stateActionKey] = Number(qCtxNext.toFixed(4));
+    person.mobility.bandit.nByStateAction[stateActionKey] = nCtxPrev + 1;
+  }
 }
 
 function cityUtility(city, person, world, religionByCity, religionCompatibilityWeight) {
@@ -2650,6 +2996,11 @@ function cityUtility(city, person, world, religionByCity, religionCompatibilityW
   const safety = city.metrics.safety;
   const trust = city.metrics.trust;
   const congestion = city.metrics.congestion;
+  const strain = clamp(city.strain ?? 0, 0, 1);
+  const regimePenalty =
+    city.regime === "fractured" ? 0.18
+    : city.regime === "stressed" ? 0.08
+    : 0;
   const rows = religionByCity?.[city.id] ?? [];
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   const same = rows.find((row) => row.religion === person.religion)?.count ?? 0;
@@ -2672,7 +3023,9 @@ function cityUtility(city, person, world, religionByCity, religionCompatibilityW
     nonlinearCongestion * 0.16 +
     compatibility * (religionCompatibilityWeight + 0.04) -
     householdAnchor * (city.id === person.homeCityId ? 0 : 1) -
-    distancePenalty
+    distancePenalty -
+    strain * 0.12 -
+    regimePenalty
   );
 }
 
@@ -3351,7 +3704,15 @@ function shuffleInPlace(arr, rng) {
 
 function computeEconomySummary(people, world) {
   if (people.length === 0) {
-    return { avgIncome: 0, unemploymentRate: 0, avgWealth: 0, banking: { deposits: 0, debt: 0, net: 0 }, byCity: [] };
+    return {
+      avgIncome: 0,
+      unemploymentRate: 0,
+      avgWealth: 0,
+      wealthDistribution: { gini: 0, top1SharePct: 0, top10SharePct: 0, top20SharePct: 0, min: 0, max: 0, avg: 0 },
+      employmentDiagnostics: null,
+      banking: { deposits: 0, debt: 0, net: 0 },
+      byCity: []
+    };
   }
   for (const person of people) {
     ensureSocioeconomicBreakdown(person);
@@ -3359,6 +3720,7 @@ function computeEconomySummary(people, world) {
   const avgIncome = people.reduce((sum, p) => sum + (p.incomeLastTick ?? 0), 0) / people.length;
   const unemploymentRate = people.filter((p) => !p.employed).length / people.length;
   const avgWealth = people.reduce((sum, p) => sum + (p.socioeconomic?.wealth ?? 0), 0) / people.length;
+  const wealthRows = people.map((p) => Math.max(0, Number(p.socioeconomic?.wealth ?? 0))).sort((a, b) => a - b);
   const deposits = people.reduce((sum, p) => sum + (p.socioeconomic?.bankDeposit ?? 0), 0);
   const debt = people.reduce((sum, p) => sum + (p.socioeconomic?.debt ?? 0), 0);
   const byCity = world.cities.map((city) => {
@@ -3384,6 +3746,16 @@ function computeEconomySummary(people, world) {
     avgIncome: Number(avgIncome.toFixed(3)),
     unemploymentRate: Number((unemploymentRate * 100).toFixed(1)),
     avgWealth: Number(avgWealth.toFixed(3)),
+    wealthDistribution: {
+      gini: Number(giniFromSorted(wealthRows).toFixed(3)),
+      top1SharePct: Number((topShareFromSorted(wealthRows, 0.01) * 100).toFixed(2)),
+      top10SharePct: Number((topShareFromSorted(wealthRows, 0.1) * 100).toFixed(2)),
+      top20SharePct: Number((topShareFromSorted(wealthRows, 0.2) * 100).toFixed(2)),
+      min: Number((wealthRows[0] ?? 0).toFixed(3)),
+      max: Number((wealthRows[wealthRows.length - 1] ?? 0).toFixed(3)),
+      avg: Number(avgWealth.toFixed(3))
+    },
+    employmentDiagnostics: world.systemState?.lastEmploymentDiagnostics ?? null,
     banking: {
       deposits: Number(deposits.toFixed(3)),
       debt: Number(debt.toFixed(3)),
@@ -3391,6 +3763,36 @@ function computeEconomySummary(people, world) {
     },
     byCity
   };
+}
+
+function giniFromSorted(values) {
+  const n = values.length;
+  if (n === 0) {
+    return 0;
+  }
+  const sum = values.reduce((acc, x) => acc + x, 0);
+  if (sum <= 0) {
+    return 0;
+  }
+  let cum = 0;
+  for (let i = 0; i < n; i += 1) {
+    cum += (i + 1) * values[i];
+  }
+  return (2 * cum) / (n * sum) - (n + 1) / n;
+}
+
+function topShareFromSorted(sortedValues, share) {
+  const n = sortedValues.length;
+  if (n === 0) {
+    return 0;
+  }
+  const total = sortedValues.reduce((sum, v) => sum + v, 0);
+  if (total <= 0) {
+    return 0;
+  }
+  const k = Math.max(1, Math.floor(n * share));
+  const top = sortedValues.slice(n - k).reduce((sum, v) => sum + v, 0);
+  return top / total;
 }
 
 function computePopulationEvents({
@@ -3654,14 +4056,19 @@ function createCompany({ id, city, rng, foundingDay = 0 }) {
     founderAssignedDay: -1,
     dividendPaidLastTick: 0,
     profitPrev: 0,
+    valuation: rng.range(0.6, 1.4),
+    growthExpectation: rng.range(0.35, 0.62),
+    hyperGrowthBoost: 1,
+    hyperGrowthEvent: false,
+    lastHyperGrowthDay: -1,
     employeeCount: 0,
     revenueTick: 0,
     costTick: 0,
     revenue: 0,
     cost: 0,
     profit: 0,
-    marketShare: 0
-    ,
+    marketShare: 0,
+    equityHolders: [],
     openPositions: 0,
     openPositionsPosted: 0,
     rlPolicy: {
@@ -3912,10 +4319,28 @@ function ensureInvestmentInstitutions(world, companies = [], rng = null) {
 
 function ensureInvestmentRlState(world, holderKey) {
   world.systemState = world.systemState ?? {};
-  const irl = (world.systemState.investmentRl = world.systemState.investmentRl ?? { entityPolicies: {} });
-  const row = (irl.entityPolicies[holderKey] = irl.entityPolicies[holderKey] ?? { qByAction: {}, nByAction: {}, lastAction: "balanced" });
+  const irl = (world.systemState.investmentRl = world.systemState.investmentRl ?? {
+    entityPolicies: {},
+    marketStressEma: 0.3,
+    prevMarketStressEma: 0.3,
+    regime: "normal",
+    lastSimulationDay: -1,
+    lastUpdateDay: -1
+  });
+  const row = (irl.entityPolicies[holderKey] = irl.entityPolicies[holderKey] ?? {
+    qByAction: {},
+    nByAction: {},
+    qByStateAction: {},
+    nByStateAction: {},
+    pendingByStateAction: {},
+    lastAction: "balanced",
+    lastStateKey: "global"
+  });
   row.qByAction = row.qByAction ?? {};
   row.nByAction = row.nByAction ?? {};
+  row.qByStateAction = row.qByStateAction ?? {};
+  row.nByStateAction = row.nByStateAction ?? {};
+  row.pendingByStateAction = row.pendingByStateAction ?? {};
   for (const action of INVESTMENT_RL_ACTIONS) {
     if (!Number.isFinite(row.qByAction[action])) {
       row.qByAction[action] = 0.5;
@@ -3926,6 +4351,64 @@ function ensureInvestmentRlState(world, holderKey) {
   }
   row.lastAction = row.lastAction ?? "balanced";
   return row;
+}
+
+function detectInvestmentRegime(world, config) {
+  const irl = world.systemState?.investmentRl;
+  if (!irl) {
+    return { regime: "normal", alphaScale: 1 };
+  }
+  const prices = world.systemState?.resources?.prices ?? {};
+  const resourceInflation =
+    ((prices.water ?? 1) + (prices.food ?? 1) + (prices.energy_fossil ?? 1) + (prices.energy_renewable ?? 1)) / 4 - 1;
+  const currency = world.systemState?.currencies ?? {};
+  const inflationValues = Object.values(currency.inflation ?? {});
+  const avgInflation = inflationValues.length
+    ? inflationValues.reduce((sum, v) => sum + (Number(v) || 0), 0) / inflationValues.length
+    : 0.012;
+  const marketIndex = world.systemState?.marketIndex ?? 1;
+  const climate = world.systemState?.climateStress ?? 0;
+  const epidemic = world.systemState?.epidemicLevel ?? 0;
+  const stressRaw = clamp(
+    (1 - clamp(marketIndex, 0.4, 1.8) / 1.2) * 0.42 +
+      Math.max(0, avgInflation - 0.02) * 5.2 * 0.24 +
+      Math.max(0, resourceInflation) * 0.22 +
+      climate * 0.06 +
+      epidemic * 0.06,
+    0,
+    1.4
+  );
+  const prev = irl.marketStressEma ?? stressRaw;
+  const next = prev * 0.82 + stressRaw * 0.18;
+  irl.prevMarketStressEma = prev;
+  irl.marketStressEma = next;
+  const delta = Math.abs(next - prev);
+  const threshold = clamp(config?.rl?.resourceRegimeShiftThreshold ?? 0.14, 0.04, 0.4);
+  const regime = next > 0.62 ? "crisis" : next > 0.38 ? "volatile" : marketIndex > 1.08 ? "growth" : "normal";
+  irl.regime = regime;
+  return { regime, alphaScale: delta > threshold ? 1.7 : 1, marketStress: next };
+}
+
+function investmentStateKey(entity, regime) {
+  const riskBand = band3(entity?.riskAppetite ?? 0.5, 0.35, 0.65);
+  return `${entity?.holderType ?? "fund"}|${regime}|r${riskBand}`;
+}
+
+function flushInvestmentPolicyPending(policy, alpha) {
+  const pending = policy.pendingByStateAction ?? {};
+  for (const [key, row] of Object.entries(pending)) {
+    const count = row?.count ?? 0;
+    if (count <= 0) {
+      continue;
+    }
+    const reward = (row.sum ?? 0) / count;
+    const [stateKey, action] = String(key).split("::");
+    if (!action) {
+      continue;
+    }
+    updatePolicyQ(policy, stateKey || "global", action, reward, alpha);
+    pending[key] = { sum: 0, count: 0 };
+  }
 }
 
 function transferSharesFromMarket({ target, holderKey, shares, price }) {
@@ -3997,28 +4480,52 @@ function simulateCorporateCrossHoldings({ companies, world, rng, phase }) {
   }
 }
 
-function simulateInstitutionalInvestments({ companies, world, rng, phase, config = {} }) {
+function simulateInstitutionalInvestments({ companies, world, rng, phase, day, config = {} }) {
   if (phase !== "Daytime" || companies.length === 0) {
     return;
+  }
+  world.systemState = world.systemState ?? {};
+  const irl = (world.systemState.investmentRl = world.systemState.investmentRl ?? {
+    entityPolicies: {},
+    marketStressEma: 0.3,
+    prevMarketStressEma: 0.3,
+    regime: "normal",
+    lastSimulationDay: -1,
+    lastUpdateDay: -1
+  });
+  const state = ensureInvestmentInstitutions(world, companies, rng);
+  if (Number.isFinite(day) && irl.lastSimulationDay === day) {
+    return;
+  }
+  if (Number.isFinite(day)) {
+    irl.lastSimulationDay = day;
   }
   const listed = companies.filter((c) => c.listed);
   const universe = listed.length > 0 ? listed : companies;
   if (!universe.length) {
     return;
   }
-  const state = ensureInvestmentInstitutions(world, companies, rng);
   for (const c of universe) {
     ensureCapTable(c);
   }
   const byId = new Map(universe.map((c) => [c.id, c]));
+  const regime = detectInvestmentRegime(world, config);
   const entities = [
     ...Object.values(state.sovereignFunds ?? {}).map((x) => ({ ...x, holderKey: x.id, holderType: "sovereign_fund" })),
     ...Object.values(state.institutionalFunds ?? {}).map((x) => ({ ...x, holderKey: x.id, holderType: x.type === "bank" ? "bank" : "institutional_fund" }))
   ];
   for (const entity of entities) {
     const policy = ensureInvestmentRlState(world, entity.holderKey);
-    const action = chooseRlAction(policy, INVESTMENT_RL_ACTIONS, clamp(config?.rl?.investmentEpsilon ?? config?.rl?.epsilon ?? 0.14, 0.01, 0.5), rng);
+    const stateKey = investmentStateKey(entity, regime.regime);
+    const action = chooseRlAction(
+      policy,
+      INVESTMENT_RL_ACTIONS,
+      clamp(config?.rl?.investmentEpsilon ?? config?.rl?.epsilon ?? 0.14, 0.01, 0.5),
+      rng,
+      stateKey
+    );
     policy.lastAction = action;
+    policy.lastStateKey = stateKey;
     const baseChance = entity.holderType === "sovereign_fund" ? 0.2 : entity.holderType === "bank" ? 0.16 : 0.24;
     if (rng.next() > baseChance + (entity.riskAppetite ?? 0.5) * 0.1) {
       continue;
@@ -4061,13 +4568,26 @@ function simulateInstitutionalInvestments({ companies, world, rng, phase, config
       -1,
       2
     );
-    const alpha = clamp(config?.rl?.alpha ?? 0.12, 0.01, 0.5);
-    const prevQ = policy.qByAction[action] ?? 0.5;
-    policy.qByAction[action] = Number((prevQ + alpha * (reward - prevQ)).toFixed(6));
-    policy.nByAction[action] = (policy.nByAction[action] ?? 0) + 1;
+    const pendingKey = stateActionKey(stateKey, action);
+    const pending = (policy.pendingByStateAction[pendingKey] = policy.pendingByStateAction[pendingKey] ?? { sum: 0, count: 0 });
+    pending.sum += reward;
+    pending.count += 1;
     entity.cash = clamp01(cash - spend);
     const replenishment = entity.holderType === "bank" ? 0.0012 : entity.holderType === "sovereign_fund" ? 0.0015 : 0.001;
     entity.cash = clamp01(entity.cash + replenishment + Math.max(0, target.profit ?? 0) * 0.0002);
+  }
+  const interval = Math.max(1, Math.floor(config?.rl?.investmentUpdateIntervalDays ?? 7));
+  const shouldUpdate = !Number.isFinite(day) || (irl.lastUpdateDay ?? -1) < 0 || day - (irl.lastUpdateDay ?? -1) >= interval;
+  if (shouldUpdate) {
+    const alphaBase = clamp(config?.rl?.investmentAlpha ?? config?.rl?.alpha ?? 0.12, 0.01, 0.5);
+    const alpha = clamp(alphaBase * (regime.alphaScale ?? 1), 0.01, 0.65);
+    for (const entity of entities) {
+      const policy = ensureInvestmentRlState(world, entity.holderKey);
+      flushInvestmentPolicyPending(policy, alpha);
+    }
+    if (Number.isFinite(day)) {
+      irl.lastUpdateDay = day;
+    }
   }
   state.sovereignFunds = Object.fromEntries(
     Object.entries(state.sovereignFunds ?? {}).map(([k, v]) => [k, { ...v, cash: clamp01(v.cash ?? 0) }])
@@ -4083,6 +4603,10 @@ function ensureCapTable(company) {
   if (!Number.isFinite(company.capTable.market)) {
     company.capTable.market = company.sharesOutstanding;
   }
+  company.valuation = Number.isFinite(company.valuation) ? company.valuation : clamp(Number(company.capital ?? 0) * 1.7, 0.05, 24);
+  company.growthExpectation = clamp01(company.growthExpectation ?? 0.5);
+  company.hyperGrowthBoost = Math.max(1, Number(company.hyperGrowthBoost ?? 1));
+  company.equityHolders = Array.isArray(company.equityHolders) ? company.equityHolders : [];
 }
 
 function normalizeCapTable(company) {
@@ -4093,16 +4617,41 @@ function normalizeCapTable(company) {
   const sum = entries.reduce((s, [, v]) => s + v, 0);
   if (sum <= 0) {
     company.capTable = { market: company.sharesOutstanding };
+    refreshCompanyEquityHolders(company);
     return;
   }
   const scale = company.sharesOutstanding / sum;
   company.capTable = Object.fromEntries(entries.map(([k, v]) => [k, Number((v * scale).toFixed(6))]));
+  refreshCompanyEquityHolders(company);
 }
 
-function syncPersonStockAssetsFromHoldings(people, companies) {
+function refreshCompanyEquityHolders(company) {
+  ensureCapTable(company);
+  const out = Math.max(1, Number(company.sharesOutstanding ?? 1000));
+  company.equityHolders = Object.entries(company.capTable)
+    .filter(([holder, shares]) => holder !== "market" && Number(shares) > 0)
+    .map(([holder, shares]) => {
+      const shareNum = Number(shares) || 0;
+      return {
+        holderKey: String(holder),
+        shares: Number(shareNum.toFixed(6)),
+        ownershipPct: Number(((shareNum / out) * 100).toFixed(3))
+      };
+    })
+    .sort((a, b) => b.shares - a.shares)
+    .slice(0, 20);
+}
+
+function syncPersonStockAssetsFromHoldings(people, companies, config) {
   const valueByPerson = new Map();
+  const maxValuation = Math.max(
+    0.0001,
+    ...companies.map((company) => Math.max(0, Number(company.valuation ?? company.capital ?? 0.1)))
+  );
+  const equityScale = Math.max(0.0001, Number(config?.company?.valuation?.max ?? 6) * 0.85 + maxValuation * 0.15);
   for (const company of companies) {
     ensureCapTable(company);
+    refreshCompanyEquityHolders(company);
     const out = Math.max(1, company.sharesOutstanding);
     for (const [holder, shares] of Object.entries(company.capTable)) {
       if (holder === "market") {
@@ -4113,16 +4662,18 @@ function syncPersonStockAssetsFromHoldings(people, companies) {
         continue;
       }
       const ownership = shares / out;
-      const contribution = ownership * clamp01(company.capital ?? 0) * 1.1;
+      const contribution = ownership * Math.max(0, Number(company.valuation ?? 0));
       valueByPerson.set(pid, (valueByPerson.get(pid) ?? 0) + contribution);
     }
   }
   for (const person of people) {
     ensureSocioeconomicBreakdown(person);
     const s = person.socioeconomic;
-    const derived = clamp01(valueByPerson.get(person.id) ?? 0);
+    const equityRaw = Math.max(0, valueByPerson.get(person.id) ?? 0);
+    const derived = clamp01(equityRaw / equityScale);
     s.stockAsset = Number(derived.toFixed(4));
-    s.stocks = clamp01((s.stocks ?? 0) * 0.7 + derived * 0.3);
+    s.equityWealth = derived;
+    s.stocks = clamp01((s.stocks ?? 0) * 0.68 + derived * 0.32);
     s.wealth = computeSocioeconomicWealth(s);
   }
 }
@@ -4280,12 +4831,32 @@ function computeCompanySummary(companies, world) {
   };
 }
 
+function getCityRegimeEffects(city, config) {
+  const normal = config?.strain?.regimeEffects?.normal ?? { migrationMult: 1, hiringRecoveryMult: 1 };
+  const regime = city?.regime ?? "normal";
+  const fx = config?.strain?.regimeEffects?.[regime] ?? normal;
+  return {
+    migrationMult: clamp(fx?.migrationMult ?? normal.migrationMult ?? 1, 0.5, 2.2),
+    hiringRecoveryMult: clamp(fx?.hiringRecoveryMult ?? normal.hiringRecoveryMult ?? 1, 0.5, 1.4)
+  };
+}
+
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
 function clamp01(v) {
   return Math.max(0, Math.min(1, v));
+}
+
+function band3(value, low, high) {
+  if (value < low) {
+    return 0;
+  }
+  if (value > high) {
+    return 2;
+  }
+  return 1;
 }
 
 function sigmoid(x) {

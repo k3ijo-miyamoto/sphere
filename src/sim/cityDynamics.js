@@ -2,6 +2,16 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
+function band3(value, low, high) {
+  if (value < low) {
+    return 0;
+  }
+  if (value > high) {
+    return 2;
+  }
+  return 1;
+}
+
 const RESOURCE_KEYS = ["water", "food", "energy_fossil", "energy_renewable", "metals_bulk", "rare_minerals", "human"];
 const RESOURCE_RL_ACTIONS = ["conserve", "balanced", "extract", "green_shift"];
 
@@ -10,6 +20,7 @@ export function updateCityDynamics({ world, frame, config, rng }) {
   ensureResourceSystems(world);
   ensureResourcePolicyState(world);
   ensurePolicyGenomeState(world, config);
+  ensureSystemicTriggerState(world);
   world.systemState.policyGenome.tick = (world.systemState.policyGenome.tick ?? 0) + 1;
 
   const presence = frame.people.cityPresence;
@@ -18,14 +29,27 @@ export function updateCityDynamics({ world, frame, config, rng }) {
   const policy = config.policy || {};
 
   const birthsDeaths = new Map(cityStats.map((item) => [item.cityId, item]));
+  const economyByCity = new Map((frame.people?.economy?.byCity ?? []).map((row) => [row.cityId, row]));
+  const strainSystemCtx = updateStrainSystemContext(world);
+  const strainSummary = {
+    total: 0,
+    p95Samples: [],
+    stressed: 0,
+    fractured: 0,
+    transitions: 0,
+    residualCases: 0
+  };
+  const transitionEvents = [];
 
   for (const city of world.cities) {
     ensureCityResourceProfile(city);
     city.lifecycle = city.lifecycle ?? { riseScore: 0.4, declineScore: 0.3, status: "stable" };
     ensureCityPolicyGenome(city, rng);
+    ensureCityStrainState(city);
     const genomePolicy = getGenomePolicyBias(city, policy);
     const popNow = presence[city.id] || 0;
     const stats = birthsDeaths.get(city.id) || { births: 0, deaths: 0, net: 0, marriages: 0, divorces: 0 };
+    const econ = economyByCity.get(city.id) ?? { unemploymentRate: 0, avgIncome: 0, avgWealth: 0 };
     const relRows = religionByCity[city.id] || [];
 
     const congestionTarget = clamp(popNow / Math.max(80, city.population * 0.012), 0.05, 1);
@@ -107,6 +131,32 @@ export function updateCityDynamics({ world, frame, config, rng }) {
       costDelta: resourceEffect.costDelta,
       instabilityDelta: resourceEffect.instabilityDelta
     }, config);
+    const strainResult = updateCityStrainAndRegime({
+      city,
+      world,
+      config,
+      economy: econ,
+      resourceEffect,
+      policy: genomePolicy,
+      systemContext: strainSystemCtx
+    });
+    applyRegimeEffectsToCity(city, config);
+    city.lifecycle.strain = Number((city.strain ?? 0).toFixed(4));
+    city.lifecycle.regime = city.regime ?? "normal";
+    strainSummary.total += city.strain ?? 0;
+    strainSummary.p95Samples.push(city.strain ?? 0);
+    if (city.regime === "stressed") {
+      strainSummary.stressed += 1;
+    } else if (city.regime === "fractured") {
+      strainSummary.fractured += 1;
+    }
+    if (strainResult.transitioned) {
+      strainSummary.transitions += 1;
+      transitionEvents.push({ cityId: city.id, from: strainResult.from, to: strainResult.to });
+    }
+    if (strainResult.residualStrainCase) {
+      strainSummary.residualCases += 1;
+    }
 
     city.population = Math.max(0, city.population + stats.net);
     city.religionComposition = relRows;
@@ -175,6 +225,10 @@ export function updateCityDynamics({ world, frame, config, rng }) {
   updateGlobalResourceMarket(world, config, rng);
   rewireTopology(world, rng);
   evolveCityNodes(world, frame, rng, config);
+  finalizeStrainMetrics(world, config, strainSummary, transitionEvents);
+  return {
+    strain: world.systemState.strainMetrics
+  };
 }
 
 function updateSystemExtensions(world, config, rng, frame) {
@@ -230,6 +284,12 @@ function ensureResourceSystems(world) {
 function ensureResourcePolicyState(world) {
   world.systemState = world.systemState ?? {};
   world.systemState.resourcePolicies = world.systemState.resourcePolicies ?? { cities: {} };
+  world.systemState.resourcePolicies.cities = world.systemState.resourcePolicies.cities ?? {};
+  world.systemState.resourcePolicies.regime = world.systemState.resourcePolicies.regime ?? "normal";
+  world.systemState.resourcePolicies.marketPressureEma = Number.isFinite(world.systemState.resourcePolicies.marketPressureEma)
+    ? world.systemState.resourcePolicies.marketPressureEma
+    : 0.3;
+  world.systemState.resourcePolicies.regimeShift = !!world.systemState.resourcePolicies.regimeShift;
 }
 
 function ensurePolicyGenomeState(world, config) {
@@ -238,6 +298,198 @@ function ensurePolicyGenomeState(world, config) {
   world.systemState.policyGenome.enabled = config?.policyGenome?.enabled !== false;
   world.systemState.policyGenome.tick = world.systemState.policyGenome.tick ?? 0;
   world.systemState.policyGenome.lastEvolutionTick = world.systemState.policyGenome.lastEvolutionTick ?? 0;
+}
+
+function ensureSystemicTriggerState(world) {
+  world.systemState = world.systemState ?? {};
+  world.systemState.systemicTriggers = world.systemState.systemicTriggers ?? {
+    forceGeopoliticsTick: false,
+    reason: null,
+    transitionsToday: 0
+  };
+}
+
+function ensureCityStrainState(city) {
+  city.strain = clamp(city.strain ?? 0.12, 0, 1);
+  city.regime = city.regime ?? "normal";
+}
+
+function averageRelationsTension(world) {
+  const relations = Object.values(world.systemState?.geopolitics?.diplomacy ?? {});
+  if (!relations.length) {
+    return 0.2;
+  }
+  return relations.reduce((sum, row) => sum + (row?.tension ?? 0.2), 0) / relations.length;
+}
+
+function countWarPairs(world) {
+  return Object.values(world.systemState?.geopolitics?.diplomacy ?? {}).filter((row) => row?.status === "war").length;
+}
+
+function policyStrainDisplacement(policy) {
+  const safety = policy?.safetyBudget ?? 0.5;
+  const welfare = policy?.welfareBudget ?? 0.5;
+  const education = policy?.educationBudget ?? 0.5;
+  const intensity = Math.abs(safety - 0.5) + Math.abs(welfare - 0.5) + Math.abs(education - 0.5);
+  return clamp(intensity * 0.16, 0, 0.24);
+}
+
+function updateCityStrainAndRegime({ city, world, config, economy, resourceEffect, policy, systemContext = null }) {
+  const cfg = config?.strain ?? {};
+  const decay = clamp(cfg.decayPerTick ?? 0.004, 0.0005, 0.03);
+  const addScale = clamp(cfg.addScale ?? 0.08, 0.01, 0.4);
+  const reliefScale = clamp(cfg.reliefScale ?? 0.028, 0.002, 0.2);
+  const unemployment = clamp((economy?.unemploymentRate ?? 0) / 100, 0, 1);
+  const incomeStress = clamp(1 - (economy?.avgIncome ?? 0), 0, 1);
+  const priceStress = clamp((city.metrics?.costOfLiving ?? 1) - 0.95, 0, 1.4);
+  const instability = clamp(city.metrics?.instabilityRisk ?? 0.2, 0, 1);
+  const inequality = clamp(city.metrics?.inequality ?? 0.3, 0, 1);
+  const distrust = clamp(1 - (city.metrics?.trust ?? 0.5), 0, 1);
+  const geopoliticsShock = clamp(averageRelationsTension(world) * 0.7 + countWarPairs(world) * 0.08, 0, 1.5);
+  const geoPriceShock = clamp(city.lifecycle?.geoPriceShock ?? 0, 0, 1.4);
+  const resourceStress = clamp(resourceEffect?.resourceStress ?? city.lifecycle?.resourceStress ?? 0.3, 0, 1);
+  const shockIntensity = clamp(
+    unemployment * 0.24 +
+      priceStress * 0.18 +
+      instability * 0.18 +
+      inequality * 0.12 +
+      distrust * 0.14 +
+      resourceStress * 0.08 +
+      geopoliticsShock * 0.04 +
+      geoPriceShock * 0.1 +
+      incomeStress * 0.1,
+    0,
+    1.8
+  );
+  const recovery = clamp(
+    (city.metrics?.safety ?? 0.5) * 0.32 +
+      (city.metrics?.trust ?? 0.5) * 0.24 +
+      Math.max(0, city.metrics?.productivity ?? 0.8) * 0.18 +
+      (1 - unemployment) * 0.16 +
+      (1 - resourceStress) * 0.1,
+    0,
+    1.6
+  );
+  const displacement = policyStrainDisplacement(policy);
+  const prevStrain = city.strain ?? 0.12;
+  const regimeReliefMult =
+    (city.regime ?? "normal") === "fractured" ? 0.56
+    : (city.regime ?? "normal") === "stressed" ? 0.72
+    : 1;
+  const shockWindowSuppressionEnabled = cfg.shockWindowReliefSuppressionEnabled === true;
+  const shockWindowMult = shockWindowSuppressionEnabled && systemContext?.inShockWindow ? 0.66 : 1;
+  const reliefFactor = regimeReliefMult * shockWindowMult;
+  const decaySlowdown =
+    (city.regime ?? "normal") === "fractured" ? 0.72
+    : (city.regime ?? "normal") === "stressed" ? 0.82
+    : 1;
+  const nextStrain = clamp(
+    prevStrain * (1 - decay * decaySlowdown) + shockIntensity * addScale + displacement * 0.03 - recovery * reliefScale * reliefFactor,
+    0,
+    1
+  );
+  city.strain = Number(nextStrain.toFixed(6));
+  const thresholds = cfg.thresholds ?? {};
+  const t1 = clamp(thresholds.normalToStressed ?? 0.42, 0.15, 0.85);
+  const t2 = clamp(thresholds.stressedToFractured ?? 0.72, t1 + 0.05, 0.98);
+  const t1b = clamp(thresholds.stressedToNormalBack ?? 0.32, 0.05, t1 - 0.02);
+  const t2b = clamp(thresholds.fracturedToStressedBack ?? 0.58, t1b + 0.05, t2 - 0.02);
+  const prevRegime = city.regime ?? "normal";
+  let nextRegime = prevRegime;
+  if (prevRegime === "normal" && nextStrain > t1) {
+    nextRegime = "stressed";
+  } else if (prevRegime === "stressed" && nextStrain > t2) {
+    nextRegime = "fractured";
+  } else if (prevRegime === "stressed" && nextStrain < t1b) {
+    nextRegime = "normal";
+  } else if (prevRegime === "fractured" && nextStrain < t2b) {
+    nextRegime = "stressed";
+  }
+  city.regime = nextRegime;
+  const residualStrainCase = recovery > 0.72 && shockIntensity < 0.35 && nextStrain > 0.22;
+  return {
+    transitioned: prevRegime !== nextRegime,
+    from: prevRegime,
+    to: nextRegime,
+    residualStrainCase
+  };
+}
+
+function updateStrainSystemContext(world) {
+  world.systemState = world.systemState ?? {};
+  const s = (world.systemState.strainSystem = world.systemState.strainSystem ?? {
+    shockMemory: 0,
+    shockWindowTicks: 0
+  });
+  const epidemic = world.systemState?.epidemicLevel ?? 0;
+  const climate = world.systemState?.climateStress ?? 0;
+  const market = world.systemState?.marketIndex ?? 1;
+  const macroShock = clamp(epidemic * 0.42 + climate * 0.28 + Math.max(0, 1 - market) * 0.3, 0, 1.4);
+  s.shockMemory = clamp((s.shockMemory ?? 0) * 0.94 + macroShock * 0.06, 0, 1.4);
+  if (macroShock > 0.56 || s.shockMemory > 0.62) {
+    s.shockWindowTicks = Math.max(s.shockWindowTicks ?? 0, 20 * 48);
+  } else {
+    s.shockWindowTicks = Math.max(0, (s.shockWindowTicks ?? 0) - 1);
+  }
+  return {
+    macroShock,
+    shockMemory: s.shockMemory,
+    inShockWindow: (s.shockWindowTicks ?? 0) > 0
+  };
+}
+
+function applyRegimeEffectsToCity(city, config) {
+  const effects = config?.strain?.regimeEffects?.[city.regime ?? "normal"] ?? config?.strain?.regimeEffects?.normal ?? {};
+  const trustRecoveryMult = clamp(effects.trustRecoveryMult ?? 1, 0.3, 1.4);
+  const instabilityAmplifier = clamp(effects.instabilityAmplifier ?? 1, 0.7, 1.9);
+  const cityDestabilizeGain = clamp(effects.cityDestabilizeGain ?? 0, 0, 0.02);
+  const hiringRecoveryMult = clamp(effects.hiringRecoveryMult ?? 1, 0.5, 1.3);
+  const trustPenalty = (1 - trustRecoveryMult) * 0.006;
+  city.metrics.trust = clamp(city.metrics.trust - trustPenalty - (city.strain ?? 0) * 0.0015, 0.02, 0.99);
+  city.metrics.instabilityRisk = clamp(
+    city.metrics.instabilityRisk * (0.985 + (instabilityAmplifier - 1) * 0.05) + (city.strain ?? 0) * 0.005 + cityDestabilizeGain,
+    0.01,
+    0.99
+  );
+  city.metrics.employmentCapacity = clamp(city.metrics.employmentCapacity * hiringRecoveryMult - (city.strain ?? 0) * 0.01, 0.12, 0.98);
+}
+
+function percentile(values, p) {
+  if (!values.length) {
+    return 0;
+  }
+  const sorted = values.slice().sort((a, b) => a - b);
+  const idx = Math.max(0, Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p)));
+  return sorted[idx];
+}
+
+function finalizeStrainMetrics(world, config, summary, transitionEvents) {
+  const cityCount = Math.max(1, world.cities.length);
+  const strained = summary.stressed + summary.fractured;
+  const fracturedRatio = summary.fractured / cityCount;
+  const stressedRatio = strained / cityCount;
+  world.systemState.strainMetrics = {
+    mean: Number((summary.total / cityCount).toFixed(4)),
+    p95: Number(percentile(summary.p95Samples, 0.95).toFixed(4)),
+    numStressed: summary.stressed,
+    numFractured: summary.fractured,
+    regimeTransitionsCount: summary.transitions,
+    residualStrainCases: summary.residualCases,
+    transitionEvents: transitionEvents.slice(-16),
+    stressedRatio: Number(stressedRatio.toFixed(4)),
+    fracturedRatio: Number(fracturedRatio.toFixed(4))
+  };
+  const triggerThreshold = clamp(config?.strain?.geopoliticalTriggerFracThreshold ?? 0.14, 0.03, 0.6);
+  const shouldForce = summary.transitions > 0 || fracturedRatio >= triggerThreshold;
+  if (shouldForce) {
+    world.systemState.systemicTriggers.forceGeopoliticsTick = true;
+    world.systemState.systemicTriggers.reason = summary.transitions > 0 ? "regime_transition" : "fractured_ratio";
+    world.systemState.systemicTriggers.transitionsToday = summary.transitions;
+  } else {
+    world.systemState.systemicTriggers.forceGeopoliticsTick = false;
+    world.systemState.systemicTriggers.reason = null;
+    world.systemState.systemicTriggers.transitionsToday = 0;
+  }
 }
 
 function ensureCityPolicyGenome(city, rng) {
@@ -270,7 +522,12 @@ function ensureCityResourcePolicy(world, cityId) {
   const row = (world.systemState.resourcePolicies.cities[cityId] = world.systemState.resourcePolicies.cities[cityId] ?? {
     qByAction: {},
     nByAction: {},
-    lastAction: "balanced"
+    qByStateAction: {},
+    nByStateAction: {},
+    pendingByStateAction: {},
+    lastStateKey: "global",
+    lastAction: "balanced",
+    lastDecision: null
   });
   for (const action of RESOURCE_RL_ACTIONS) {
     if (!Number.isFinite(row.qByAction[action])) {
@@ -280,29 +537,96 @@ function ensureCityResourcePolicy(world, cityId) {
       row.nByAction[action] = 0;
     }
   }
+  row.qByStateAction = row.qByStateAction ?? {};
+  row.nByStateAction = row.nByStateAction ?? {};
+  row.pendingByStateAction = row.pendingByStateAction ?? {};
   return row;
+}
+
+function getResourcePolicyQ(row, stateKey, action) {
+  const key = `${stateKey}::${action}`;
+  const stateQ = row.qByStateAction?.[key];
+  if (Number.isFinite(stateQ)) {
+    return stateQ;
+  }
+  return row.qByAction?.[action] ?? 0.5;
+}
+
+function detectResourceRegime(world, config) {
+  ensureResourcePolicyState(world);
+  const state = world.systemState.resourcePolicies;
+  const prices = world.systemState?.resources?.prices ?? {};
+  const avgPrice =
+    ((prices.water ?? 1) + (prices.food ?? 1) + (prices.energy_fossil ?? 1) + (prices.energy_renewable ?? 1) + (prices.metals_bulk ?? 1)) / 5;
+  const pressure = clamp((avgPrice - 1) * 0.8 + (world.systemState?.climateStress ?? 0) * 0.25, 0, 1.6);
+  const prev = state.marketPressureEma ?? pressure;
+  const next = prev * 0.84 + pressure * 0.16;
+  state.marketPressureEma = next;
+  const threshold = clamp(config?.rl?.resourceRegimeShiftThreshold ?? 0.14, 0.04, 0.4);
+  state.regimeShift = Math.abs(next - prev) > threshold;
+  state.regime =
+    next > 0.6 ? "scarce"
+    : next < 0.2 ? "abundant"
+    : "normal";
+  return state.regime;
+}
+
+function resourceStateKey(city, regime) {
+  const scarcity = band3(city?.lifecycle?.resourceStress ?? 0.35, 0.34, 0.62);
+  const prod = band3(city?.metrics?.productivity ?? 0.9, 0.8, 1.15);
+  const instability = band3(city?.metrics?.instabilityRisk ?? 0.3, 0.28, 0.56);
+  return `${regime}|sc${scarcity}|p${prod}|i${instability}`;
 }
 
 function chooseResourcePolicyAction(world, cityId, config, rng, genome = null) {
   const row = ensureCityResourcePolicy(world, cityId);
+  const regime = detectResourceRegime(world, config);
+  const city = world.getCityById(cityId);
+  const stateKey = resourceStateKey(city, regime);
   const genomeExploration = 0.8 + (genome?.explorationBias ?? 0.5) * 0.8;
   const eps = clamp((config?.rl?.resourceEpsilon ?? config?.rl?.epsilon ?? 0.12) * genomeExploration, 0.01, 0.55);
   let action = row.lastAction ?? "balanced";
+  let decision = { qValue: getResourcePolicyQ(row, stateKey, action), genomeBias: resourceActionGenomeBias(action, genome), totalScore: 0 };
+  decision.totalScore = decision.qValue + decision.genomeBias;
   if (rng.next() < eps) {
     action = RESOURCE_RL_ACTIONS[Math.floor(rng.range(0, RESOURCE_RL_ACTIONS.length))];
+    decision = {
+      qValue: getResourcePolicyQ(row, stateKey, action),
+      genomeBias: resourceActionGenomeBias(action, genome),
+      totalScore: 0
+    };
+    decision.totalScore = decision.qValue + decision.genomeBias;
   } else {
     let best = RESOURCE_RL_ACTIONS[0];
     let bestQ = -Infinity;
+    let bestQValue = 0;
+    let bestGenomeBias = 0;
     for (const a of RESOURCE_RL_ACTIONS) {
-      const q = (row.qByAction[a] ?? 0) + resourceActionGenomeBias(a, genome);
+      const qValue = getResourcePolicyQ(row, stateKey, a);
+      const genomeBias = resourceActionGenomeBias(a, genome);
+      const q = qValue + genomeBias;
       if (q > bestQ) {
         bestQ = q;
         best = a;
+        bestQValue = qValue;
+        bestGenomeBias = genomeBias;
       }
     }
     action = best;
+    decision = { qValue: bestQValue, genomeBias: bestGenomeBias, totalScore: bestQ };
   }
   row.lastAction = action;
+  row.lastStateKey = stateKey;
+  row.lastDecision = {
+    stateKey,
+    regime,
+    action,
+    qContribution: Number(decision.qValue.toFixed(5)),
+    genomeContribution: Number(decision.genomeBias.toFixed(5)),
+    totalScore: Number(decision.totalScore.toFixed(5))
+  };
+  world.systemState.resourcePolicies.lastDecisionByCity = world.systemState.resourcePolicies.lastDecisionByCity ?? {};
+  world.systemState.resourcePolicies.lastDecisionByCity[cityId] = row.lastDecision;
   if (action === "conserve") {
     return { action, extractionMult: 0.85, renewableBoost: 1.08, demandMult: 0.94 };
   }
@@ -400,15 +724,44 @@ function blendGenome(target, donor, blend, mutationScale, rng) {
 
 function updateResourcePolicyLearning(world, cityId, action, outcome, config) {
   const row = ensureCityResourcePolicy(world, cityId);
-  const alpha = clamp(config?.rl?.alpha ?? 0.12, 0.01, 0.5);
+  const stateKey = row.lastStateKey ?? "global";
   const reward = clamp(
     1 - (outcome.resourceStress ?? 0) * 0.9 + (outcome.productivityDelta ?? 0) * 18 - (outcome.costDelta ?? 0) * 9 - (outcome.instabilityDelta ?? 0) * 12,
     -1,
     2
   );
-  const prev = row.qByAction[action] ?? 0.5;
-  row.qByAction[action] = Number((prev + alpha * (reward - prev)).toFixed(6));
-  row.nByAction[action] = (row.nByAction[action] ?? 0) + 1;
+  const pendingKey = `${stateKey}::${action}`;
+  const pending = (row.pendingByStateAction[pendingKey] = row.pendingByStateAction[pendingKey] ?? { sum: 0, count: 0 });
+  pending.sum += reward;
+  pending.count += 1;
+  const interval = Math.max(1, Math.floor(config?.rl?.resourceUpdateIntervalTicks ?? 4));
+  const tick = world.systemState?.policyGenome?.tick ?? 0;
+  const lastTick = row.lastUpdateTick ?? -1;
+  if (lastTick >= 0 && tick - lastTick < interval) {
+    return;
+  }
+  const regimeScale = world.systemState?.resourcePolicies?.regimeShift ? 1.45 : 1;
+  const alpha = clamp((config?.rl?.resourceAlpha ?? config?.rl?.alpha ?? 0.12) * regimeScale, 0.01, 0.65);
+  for (const [key, cell] of Object.entries(row.pendingByStateAction)) {
+    const count = cell?.count ?? 0;
+    if (count <= 0) {
+      continue;
+    }
+    const avgReward = (cell.sum ?? 0) / count;
+    const [kState, kAction] = String(key).split("::");
+    if (!kAction) {
+      continue;
+    }
+    const stateActionKey = `${kState}::${kAction}`;
+    const prevStateQ = Number.isFinite(row.qByStateAction[stateActionKey]) ? row.qByStateAction[stateActionKey] : getResourcePolicyQ(row, kState, kAction);
+    row.qByStateAction[stateActionKey] = Number((prevStateQ + alpha * (avgReward - prevStateQ)).toFixed(6));
+    row.nByStateAction[stateActionKey] = (row.nByStateAction[stateActionKey] ?? 0) + count;
+    const prevGlobal = row.qByAction[kAction] ?? 0.5;
+    row.qByAction[kAction] = Number((prevGlobal + alpha * (avgReward - prevGlobal)).toFixed(6));
+    row.nByAction[kAction] = (row.nByAction[kAction] ?? 0) + count;
+    row.pendingByStateAction[key] = { sum: 0, count: 0 };
+  }
+  row.lastUpdateTick = tick;
 }
 
 function ensureCityResourceProfile(city) {

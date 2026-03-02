@@ -1,0 +1,546 @@
+{
+  "meta": {
+    "days": 50,
+    "seed": 1337,
+    "targetCityId": "C1",
+    "trackedIndividuals": 220,
+    "generatedAt": "2026-03-01T15:37:30.267Z"
+  },
+  "tests": {
+    "testA": {
+      "name": "A",
+      "principle": "Individuals ↔ Institutions ↔ Environment",
+      "pass": false,
+      "checks": {
+        "behaviorChanged": true,
+        "cityChanged": false,
+        "policyAdapted": false
+      },
+      "baseline": {
+        "name": "A_baseline",
+        "ticks": 2400,
+        "population": 197,
+        "behavior": {
+          "relocationRatePerTick": 0.00016920473773265651,
+          "marriageRatePerTick": 0.000983502538071066,
+          "birthRatePerTick": 0.000016920473773265652,
+          "avgUnemployment": 25.110541666667093,
+          "avgIncome": 0.9664316666666672
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 0.28305287486691316,
+          "safety": 0.9752571971245265,
+          "trust": 0.9766958745605394,
+          "instabilityRisk": 0.04704674192367478,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 92,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "justice_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "tertiary_push",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 0.7657
+        },
+        "geopolitics": {
+          "avgTension": 0.02230000000000045,
+          "maxAvgTension": 0.09216666666666666,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.06721750000000087,
+          "avgSafety": 0.9684765499471263,
+          "avgAge": 39.59966622627218,
+          "avgOpenness": 0.5618019839337343,
+          "avgFamilyOriented": 0.5687272352939554,
+          "religiousDiversity": -337.39007155798504,
+          "wealthGini": 0.13787046525586288
+        },
+        "events": {
+          "riotRisk": 37,
+          "war": 0,
+          "crisis": 12,
+          "sanction": 0
+        }
+      },
+      "intervention": {
+        "name": "A_intervention",
+        "ticks": 2400,
+        "population": 198,
+        "behavior": {
+          "relocationRatePerTick": 0.00015572390572390573,
+          "marriageRatePerTick": 0.0010016835016835018,
+          "birthRatePerTick": 0.000027356902356902358,
+          "avgUnemployment": 25.136625000000063,
+          "avgIncome": 0.9827270833333331
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.1210054666034308,
+          "safety": 0.9750496205508935,
+          "trust": 0.9765856549094901,
+          "instabilityRisk": 0.050984181752124144,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 88,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "welfare_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 1.0828
+        },
+        "geopolitics": {
+          "avgTension": 0.022443333333334006,
+          "maxAvgTension": 0.07333333333333333,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.06077916666666766,
+          "avgSafety": 0.9757187631566241,
+          "avgAge": 38.39988930400025,
+          "avgOpenness": 0.5632011979623562,
+          "avgFamilyOriented": 0.5754160112407154,
+          "religiousDiversity": -338.6374194937201,
+          "wealthGini": 0.15752500787045665
+        },
+        "events": {
+          "riotRisk": 0,
+          "war": 0,
+          "crisis": 19,
+          "sanction": 0
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": -0.000013,
+          "marriageRatePerTick": 0.000018,
+          "birthRatePerTick": 0.00001,
+          "avgUnemployment": 0.026083,
+          "avgIncome": 0.016295
+        },
+        "city": {
+          "productivity": 0.837953,
+          "safety": -0.000208,
+          "trust": -0.00011,
+          "instabilityRisk": 0.003937,
+          "inequality": 0
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -4,
+          "policyRevisionCount": 0,
+          "cityPolicyMutationCount": 0,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": 0.000143,
+          "maxAvgTension": -0.018833,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": -0.006438,
+          "avgSafety": 0.007242,
+          "avgAge": -1.199777,
+          "religiousDiversity": -1.247348,
+          "wealthGini": 0.019655
+        }
+      }
+    },
+    "testB": {
+      "name": "B",
+      "principle": "Multi-scale coevolution",
+      "pass": false,
+      "checks": {
+        "economyShock": true,
+        "migrationShift": true,
+        "cityDestabilize": false,
+        "geopoliticalSpill": false,
+        "feedbackToCities": false
+      },
+      "score": 2,
+      "baseline": {
+        "name": "B_baseline",
+        "ticks": 2400,
+        "population": 197,
+        "behavior": {
+          "relocationRatePerTick": 0.00016920473773265651,
+          "marriageRatePerTick": 0.000983502538071066,
+          "birthRatePerTick": 0.000016920473773265652,
+          "avgUnemployment": 25.110541666667093,
+          "avgIncome": 0.9664316666666672
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 0.28305287486691316,
+          "safety": 0.9752571971245265,
+          "trust": 0.9766958745605394,
+          "instabilityRisk": 0.04704674192367478,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 92,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "justice_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "tertiary_push",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 0.7657
+        },
+        "geopolitics": {
+          "avgTension": 0.02230000000000045,
+          "maxAvgTension": 0.09216666666666666,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.06721750000000087,
+          "avgSafety": 0.9684765499471263,
+          "avgAge": 39.59966622627218,
+          "avgOpenness": 0.5618019839337343,
+          "avgFamilyOriented": 0.5687272352939554,
+          "religiousDiversity": -337.39007155798504,
+          "wealthGini": 0.13787046525586288
+        },
+        "events": {
+          "riotRisk": 37,
+          "war": 0,
+          "crisis": 12,
+          "sanction": 0
+        }
+      },
+      "intervention": {
+        "name": "B_shock",
+        "ticks": 2400,
+        "population": 196,
+        "behavior": {
+          "relocationRatePerTick": 0.00017006802721088434,
+          "marriageRatePerTick": 0.0009778911564625851,
+          "birthRatePerTick": 0.000012755102040816327,
+          "avgUnemployment": 25.520458333333327,
+          "avgIncome": 1.0443037500000032
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.1472541210113691,
+          "safety": 0.9758062544830393,
+          "trust": 0.9770926525692848,
+          "instabilityRisk": 0.044192236055462575,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 87,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "welfare_focus",
+          "cityPolicyMutationCount": 5,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 1.1011
+        },
+        "geopolitics": {
+          "avgTension": 0.02238000000000059,
+          "maxAvgTension": 0.05716666666666667,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.06900541666666747,
+          "avgSafety": 0.9613529440004188,
+          "avgAge": 40.33276488677808,
+          "avgOpenness": 0.5756071052198432,
+          "avgFamilyOriented": 0.5835157421900559,
+          "religiousDiversity": -332.08101402611544,
+          "wealthGini": 0.09395733336582945
+        },
+        "events": {
+          "riotRisk": 104,
+          "war": 0,
+          "crisis": 11,
+          "sanction": 0
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": 0.000001,
+          "marriageRatePerTick": -0.000006,
+          "birthRatePerTick": -0.000004,
+          "avgUnemployment": 0.409917,
+          "avgIncome": 0.077872
+        },
+        "city": {
+          "productivity": 0.864201,
+          "safety": 0.000549,
+          "trust": 0.000397,
+          "instabilityRisk": -0.002855,
+          "inequality": 0
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -5,
+          "policyRevisionCount": 0,
+          "cityPolicyMutationCount": 3,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": 0.00008,
+          "maxAvgTension": -0.035,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.001788,
+          "avgSafety": -0.007124,
+          "avgAge": 0.733099,
+          "religiousDiversity": 5.309058,
+          "wealthGini": -0.043913
+        }
+      }
+    },
+    "testC": {
+      "name": "C",
+      "principle": "Trait distribution pushes institutions",
+      "pass": true,
+      "checks": {
+        "socioChange": true,
+        "structureChange": true,
+        "institutionPushback": true
+      },
+      "baseline": {
+        "name": "C_baseline",
+        "ticks": 2400,
+        "population": 197,
+        "behavior": {
+          "relocationRatePerTick": 0.00016920473773265651,
+          "marriageRatePerTick": 0.000983502538071066,
+          "birthRatePerTick": 0.000016920473773265652,
+          "avgUnemployment": 25.110541666667093,
+          "avgIncome": 0.9664316666666672
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 0.28305287486691316,
+          "safety": 0.9752571971245265,
+          "trust": 0.9766958745605394,
+          "instabilityRisk": 0.04704674192367478,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 92,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "justice_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "tertiary_push",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 0.7657
+        },
+        "geopolitics": {
+          "avgTension": 0.02230000000000045,
+          "maxAvgTension": 0.09216666666666666,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.06721750000000087,
+          "avgSafety": 0.9684765499471263,
+          "avgAge": 39.59966622627218,
+          "avgOpenness": 0.5618019839337343,
+          "avgFamilyOriented": 0.5687272352939554,
+          "religiousDiversity": -337.39007155798504,
+          "wealthGini": 0.13787046525586288
+        },
+        "events": {
+          "riotRisk": 37,
+          "war": 0,
+          "crisis": 12,
+          "sanction": 0
+        }
+      },
+      "intervention": {
+        "name": "C_trait_bias",
+        "ticks": 2400,
+        "population": 205,
+        "behavior": {
+          "relocationRatePerTick": 0.00015447154471544717,
+          "marriageRatePerTick": 0.0009349593495934959,
+          "birthRatePerTick": 0.000022357723577235773,
+          "avgUnemployment": 24.87691666666684,
+          "avgIncome": 0.9574324999999986
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 0.5911552020025048,
+          "safety": 0.9753691089631199,
+          "trust": 0.9767541364558294,
+          "instabilityRisk": 0.05794271563365731,
+          "inequality": 0.05
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 87,
+          "policyRevisionCount": 2500,
+          "cityPolicyAction": "welfare_focus",
+          "cityPolicyMutationCount": 3,
+          "cityEducationPolicyAction": "tertiary_push",
+          "cityEducationPolicyUpdates": 50
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 2400,
+          "lastEvolutionTick": 2400,
+          "cityFitness": 0.8228
+        },
+        "geopolitics": {
+          "avgTension": 0.022286666666667683,
+          "maxAvgTension": 0.0785,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "finalStatuses": {
+            "peace": 6
+          },
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": 0.0667633333333342,
+          "avgSafety": 0.969139274904968,
+          "avgAge": 39.0947544269977,
+          "avgOpenness": 0.5559118489834863,
+          "avgFamilyOriented": 0.5637298326782376,
+          "religiousDiversity": -334.83989667071904,
+          "wealthGini": 0.15086733666733676
+        },
+        "events": {
+          "riotRisk": 1,
+          "war": 0,
+          "crisis": 9,
+          "sanction": 0
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": -0.000015,
+          "marriageRatePerTick": -0.000049,
+          "birthRatePerTick": 0.000005,
+          "avgUnemployment": -0.233625,
+          "avgIncome": -0.008999
+        },
+        "city": {
+          "productivity": 0.308102,
+          "safety": 0.000112,
+          "trust": 0.000058,
+          "instabilityRisk": 0.010896,
+          "inequality": 0
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -5,
+          "policyRevisionCount": 0,
+          "cityPolicyMutationCount": 1,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": -0.000013,
+          "maxAvgTension": -0.013667,
+          "maxWarPairs": 0,
+          "maxCrisisPairs": 0,
+          "borderRestrictedEdges": 0
+        },
+        "social": {
+          "avgInstability": -0.000454,
+          "avgSafety": 0.000663,
+          "avgAge": -0.504912,
+          "religiousDiversity": 2.550175,
+          "wealthGini": 0.012997
+        }
+      }
+    }
+  },
+  "principles": {
+    "emergenceOverScripting": {
+      "pass": false,
+      "rationale": "Interventions create systemic responses without scripted event injection.",
+      "evidenceFrom": [
+        "testA",
+        "testB"
+      ]
+    },
+    "reciprocalCausality": {
+      "pass": false,
+      "rationale": "Policy/institution intervention -> individual behavior changes -> city/system indicators -> policy adaptation.",
+      "evidenceFrom": [
+        "testA"
+      ]
+    },
+    "multiScaleCoevolution": {
+      "pass": false,
+      "rationale": "Shock and trait-distribution interventions propagate across person/city/nation/world-order layers.",
+      "evidenceFrom": [
+        "testB",
+        "testC"
+      ]
+    }
+  },
+  "verdict": {
+    "passCount": 0,
+    "total": 3,
+    "pass": false,
+    "label": "Partial verification; inspect failing test evidence."
+  }
+}

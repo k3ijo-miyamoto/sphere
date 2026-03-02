@@ -150,8 +150,8 @@ const tools = [
         cityId: { type: "string", description: "Optional city filter when listing tops." },
         sortBy: {
           type: "string",
-          description: "Sort key for top mode: revenue | profit | marketShare | stock | capital",
-          enum: ["revenue", "profit", "marketShare", "stock", "capital"]
+          description: "Sort key for top mode: revenue | profit | marketShare | stock | capital | valuation",
+          enum: ["revenue", "profit", "marketShare", "stock", "capital", "valuation"]
         },
         limit: { type: "integer", minimum: 1, maximum: 50, default: 5 }
       }
@@ -387,7 +387,7 @@ const toolHandlers = {
     const companyName = args.companyName ? String(args.companyName).trim() : null;
     const cityId = args.cityId ? String(args.cityId) : null;
     const sortRaw = String(args.sortBy ?? "revenue").trim();
-    const sortBy = ["revenue", "profit", "marketShare", "stock", "capital"].includes(sortRaw) ? sortRaw : "revenue";
+    const sortBy = ["revenue", "profit", "marketShare", "stock", "capital", "valuation"].includes(sortRaw) ? sortRaw : "revenue";
     const limit = clampInt(args.limit ?? 5, 1, 50);
     return buildCompanyFinancials({ world, frame, engine, companyId, companyName, cityId, sortBy, limit });
   },
@@ -1042,6 +1042,7 @@ function buildCompanyFinancials({
     const stock = Number((s.stock ?? company.stockPrice ?? 1).toFixed(3));
     const marketShare = Number(((s.marketShare ?? company.marketShare ?? 0)).toFixed(3));
     const capital = Number(((company.capital ?? 0)).toFixed(3));
+    const valuation = Number((company.valuation ?? (capital * 1.8 + Math.max(0, revenue) * 0.35)).toFixed(3));
     const margin = revenue > 0 ? Number((profit / revenue).toFixed(3)) : 0;
     const pseudoAssets = Number((capital * 1.8 + Math.max(0, revenue) * 0.35).toFixed(3));
     const pseudoLiabilities = Number((Math.max(0, pseudoAssets - capital)).toFixed(3));
@@ -1115,12 +1116,14 @@ function buildCompanyFinancials({
       marketShare,
       stock,
       capital,
+      valuation,
       sharesOutstanding: Number(sharesOutstanding.toFixed(3)),
       capTable: {
         holderCount: holderRows.length,
         concentrationHhi: Number(hhi.toFixed(1)),
         topHolders
       },
+      equityHolders: Array.isArray(company.equityHolders) ? company.equityHolders.slice(0, 8) : [],
       balanceSheetPseudo: {
         assets: pseudoAssets,
         liabilities: pseudoLiabilities,

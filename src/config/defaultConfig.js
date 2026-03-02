@@ -17,9 +17,11 @@ export const DEFAULT_CONFIG = {
     bandit: {
       enabled: true,
       learningRate: 0.12,
+      forgetting: 0.02,
       epsilon: 0.08,
       explorationBonus: 0.06,
-      utilityWeight: 0.82
+      utilityWeight: 0.82,
+      useContext: true
     }
   },
   religion: {
@@ -27,7 +29,19 @@ export const DEFAULT_CONFIG = {
   },
   economy: {
     unemploymentPenalty: 0.06,
-    skillLearningRate: 0.012
+    skillLearningRate: 0.012,
+    salaryWealthEma: 0.08,
+    salaryWealthScale: 0.45
+  },
+  employment: {
+    baseHireShareRegimeMult: {
+      normal: 1,
+      stressed: 0.9,
+      fractured: 0.82
+    },
+    baseHireShareFloor: 0.08,
+    baseHirePolicyCoupling: 0.12,
+    baseHireStabilityCoupling: 0.08
   },
   currency: {
     enabled: true,
@@ -56,6 +70,10 @@ export const DEFAULT_CONFIG = {
     warThreshold: 0.78,
     crisisThreshold: 0.58,
     allianceThreshold: 0.24,
+    restrictionPermitLockTicks: 48,
+    restrictionSealedLockTicks: 96,
+    sealedReleaseShockThreshold: 0.14,
+    permitReleaseShockThreshold: 0.07,
     nationFormationEnabled: true,
     nationFormationBaseChance: 0.09,
     nationFormationPressureThreshold: 0.46,
@@ -83,10 +101,62 @@ export const DEFAULT_CONFIG = {
     genesisPressureStreak: 4,
     genesisCooldownTicks: 14
   },
+  strain: {
+    enabled: true,
+    shockWindowReliefSuppressionEnabled: false,
+    decayPerTick: 0.004,
+    addScale: 0.08,
+    reliefScale: 0.028,
+    thresholds: {
+      normalToStressed: 0.42,
+      stressedToFractured: 0.72,
+      stressedToNormalBack: 0.32,
+      fracturedToStressedBack: 0.58
+    },
+    regimeEffects: {
+      normal: {
+        trustRecoveryMult: 1,
+        instabilityAmplifier: 1,
+        cityDestabilizeGain: 0,
+        migrationMult: 1,
+        hiringRecoveryMult: 1
+      },
+      stressed: {
+        trustRecoveryMult: 0.78,
+        instabilityAmplifier: 1.22,
+        cityDestabilizeGain: 0.0015,
+        migrationMult: 1.18,
+        hiringRecoveryMult: 0.9
+      },
+      fractured: {
+        trustRecoveryMult: 0.56,
+        instabilityAmplifier: 1.45,
+        cityDestabilizeGain: 0.0035,
+        migrationMult: 1.45,
+        hiringRecoveryMult: 0.75
+      }
+    },
+    geopoliticalTriggerFracThreshold: 0.14
+  },
   company: {
     competitionPenalty: 0.08,
     supplyChainEffect: 0.12,
-    stockVolatility: 0.04
+    stockVolatility: 0.04,
+    valuation: {
+      baseCapitalWeight: 1.7,
+      baseRevenueWeight: 0.45,
+      profitScale: 4,
+      growthScale: 1.35,
+      lossPenaltyScale: 2.6,
+      min: 0.05,
+      max: 6
+    },
+    hyperGrowth: {
+      chance: 0.003,
+      minMultiplier: 1.8,
+      maxMultiplier: 3.6,
+      boostDecay: 0.9
+    }
   },
   extensions: {
     epidemic: {
@@ -106,7 +176,11 @@ export const DEFAULT_CONFIG = {
     mode: "balanced",
     safetyBudget: 0.5,
     welfareBudget: 0.5,
-    educationBudget: 0.5
+    educationBudget: 0.5,
+    targetEmploymentCityId: null,
+    targetEmploymentBoost: 0,
+    targetEmploymentBoostTicks: 0,
+    targetEmploymentBoostRegimeOnly: true
   },
   population: {
     trackedIndividuals: 900,
@@ -131,7 +205,16 @@ export const DEFAULT_CONFIG = {
     companyEpsilon: 0.12,
     diplomacyEpsilon: 0.1,
     resourceEpsilon: 0.12,
-    investmentEpsilon: 0.14
+    investmentEpsilon: 0.14,
+    companyAlpha: 0.12,
+    investmentAlpha: 0.12,
+    diplomacyAlpha: 0.1,
+    resourceAlpha: 0.12,
+    secretSocietyAlpha: 0.08,
+    diplomacyUpdateIntervalDays: 30,
+    investmentUpdateIntervalDays: 7,
+    resourceUpdateIntervalTicks: 4,
+    resourceRegimeShiftThreshold: 0.14
   },
   educationSystem: {
     enabled: true,

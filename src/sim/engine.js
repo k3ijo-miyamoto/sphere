@@ -32,15 +32,20 @@ export class SimulationEngine {
       dayOfWeek,
       isWeekend
     });
-    updateCityDynamics({ world: this.world, frame: { people: peopleFrame }, config: this.config, rng: this.rng });
+    const cityDynamics = updateCityDynamics({ world: this.world, frame: { people: peopleFrame }, config: this.config, rng: this.rng });
+    const forceGeopoliticsTick = this.world.systemState?.systemicTriggers?.forceGeopoliticsTick ?? false;
     const geopolitics = updateGeopolitics({
       world: this.world,
       frame: { people: peopleFrame },
       config: this.config,
       rng: this.rng,
       day: this.clock.day,
-      phase
+      phase,
+      forceUpdate: forceGeopoliticsTick
     });
+    if (forceGeopoliticsTick && this.world.systemState?.systemicTriggers) {
+      this.world.systemState.systemicTriggers.forceGeopoliticsTick = false;
+    }
     if (geopolitics.events?.length) {
       peopleFrame.events = [...geopolitics.events, ...(peopleFrame.events ?? [])].slice(0, 12);
     }
@@ -51,7 +56,7 @@ export class SimulationEngine {
       dayOfWeek,
       isWeekend,
       worldVersion: this.world.version,
-      system: { ...this.world.systemState },
+      system: { ...this.world.systemState, cityDynamics },
       flows,
       particles,
       people: peopleFrame,

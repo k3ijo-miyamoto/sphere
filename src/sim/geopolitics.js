@@ -2,6 +2,16 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
+function band3(value, low, high) {
+  if (value < low) {
+    return 0;
+  }
+  if (value > high) {
+    return 2;
+  }
+  return 1;
+}
+
 const DIPLOMACY_RL_ACTIONS = ["detente", "balanced", "assertive"];
 const SECRET_SOCIETY_RL_ACTIONS = ["recruit", "hide", "market_infiltration", "state_infiltration", "border_disruption", "cooldown"];
 const DEFAULT_BLOC_VALUES = ["mercantile", "technocratic", "communitarian", "security", "pluralist"];
@@ -10,7 +20,7 @@ function pairKey(a, b) {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
-export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
+export function updateGeopolitics({ world, frame, config, rng, day, phase, forceUpdate = false }) {
   if (!(config.geopolitics?.enabled ?? true)) {
     return {
       nations: [],
@@ -27,16 +37,22 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
 
   const state = ensureGeopoliticsState(world);
   const events = [];
-  if (phase === "Night" && state.lastUpdateDay !== day) {
+  const shouldDailyUpdate = phase === "Night" && state.lastUpdateDay !== day;
+  const shouldUpdateNow = shouldDailyUpdate || forceUpdate;
+  if (shouldUpdateNow) {
     attemptNationFormation({ world, frame, config, state, rng, day, events });
     updateMetaOrder({ world, frame, config, state, rng, day, events });
   }
   const nationStats = computeNationStats(world, frame);
   const relationRows = [];
   const nations = world.nations ?? [];
+  const hotspot = computeGeopoliticalHotspotInputs(world, nations);
+  const burst = forceUpdate ? 0.07 : 0;
 
-  if (phase === "Night" && state.lastUpdateDay !== day) {
-    state.lastUpdateDay = day;
+  if (shouldUpdateNow) {
+    if (shouldDailyUpdate) {
+      state.lastUpdateDay = day;
+    }
     updateCurrencyRegime(world, nationStats, rng, config, day);
     const tradeMatrix = computeTradeDependence(world);
     const valueMatrix = computeValueDistance(world);
@@ -52,7 +68,6 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
           trustMemory: 0.58
         };
         const dPolicy = ensureDiplomacyPolicyState(state, key);
-        const dAction = chooseDiplomacyAction(dPolicy, config, rng);
         const border = borderFriction(world, a.id, b.id);
         const stress = ((nationStats[a.id]?.stress ?? 0.3) + (nationStats[b.id]?.stress ?? 0.3)) * 0.5;
         const powerGap = Math.abs((nationStats[a.id]?.power ?? 0.4) - (nationStats[b.id]?.power ?? 0.4));
@@ -60,6 +75,16 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
         const valueDistance = valueMatrix[key] ?? 0.45;
         const threat = sharedThreat(world, a.id, b.id);
         const market = world.systemState?.marketIndex ?? 1;
+        const localShock =
+          (hotspot.nationHotspot[a.id] ?? 0) * 0.08 +
+          (hotspot.nationHotspot[b.id] ?? 0) * 0.08 +
+          (hotspot.pairFlow[pairKey(a.id, b.id)] ?? 0) * 0.24 +
+          hotspot.energyPriceShock * 0.06 +
+          (hotspot.spill[a.id] ?? 0) * 0.05 +
+          (hotspot.spill[b.id] ?? 0) * 0.05 +
+          burst;
+        const dStateKey = diplomacyStateKey(prev, { stress, tradeDependence });
+        const dAction = chooseDiplomacyAction(dPolicy, dStateKey, config, rng);
         let geopoliticalDrift =
           border * 0.1 +
           stress * 0.08 +
@@ -69,6 +94,7 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
           threat * 0.1 -
           prev.trustMemory * 0.09 -
           (market - 1) * 0.05 +
+          localShock +
           rng.range(-0.035, 0.035);
         if (dAction === "detente") {
           geopoliticalDrift -= 0.06;
@@ -107,13 +133,14 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
         }
         const relation = clamp(1 - tension + (status === "alliance" ? 0.16 : 0) - (status === "war" ? 0.2 : 0), 0, 1);
         state.diplomacy[key] = { tension, relation, status, trustMemory, tradeDependence, valueDistance };
-        updateDiplomacyPolicyLearning(dPolicy, dAction, { tension, relation, status }, config);
+        updateDiplomacyPolicyLearning(dPolicy, dAction, dStateKey, { tension, relation, status }, config, day);
       }
     }
-    applyBorderPolicyByDiplomacy(world, state.diplomacy);
+    applyGeopoliticalFeedbackToCities(world, state, hotspot, config);
     evolveMilitaryCompanies(world, state, nationStats, rng, day, events);
     evolveSecretSocieties(world, state, nationStats, rng, day, events, config);
     applyWarTerritorialShift(world, state, nationStats, rng, events);
+    applyBorderPolicyByDiplomacy(world, state.diplomacy, state, config);
     syncNationEventHistory({ world, state, events, day });
   }
 
@@ -188,7 +215,8 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase }) {
       { order: 5, layer: "hegemonic_networks", status: "active" }
     ],
     events: events.slice(0, 6),
-    nationHistoryTail: (state.nationHistory ?? []).slice(-20)
+    nationHistoryTail: (state.nationHistory ?? []).slice(-20),
+    edgeRestrictionStats: state.edgeRestrictionStats ?? { open: 0, permit: 0, sealed: 0, changedThisTick: 0 }
   };
 }
 
@@ -211,6 +239,8 @@ function ensureGeopoliticsState(world) {
     world.systemState.geopolitics = {
       diplomacy: {},
       diplomacyPolicies: {},
+      edgeShockById: {},
+      edgeShockPairValueById: {},
       militaryCompanies: [],
       secretSocieties: [],
       secretSocietyPolicies: {},
@@ -230,6 +260,8 @@ function ensureGeopoliticsState(world) {
   world.systemState.geopolitics.secretSocietyAgendaPriors = world.systemState.geopolitics.secretSocietyAgendaPriors ?? {};
   world.systemState.geopolitics.archivedSecretSocietyPolicies = world.systemState.geopolitics.archivedSecretSocietyPolicies ?? {};
   world.systemState.geopolitics.diplomacyPolicies = world.systemState.geopolitics.diplomacyPolicies ?? {};
+  world.systemState.geopolitics.edgeShockById = world.systemState.geopolitics.edgeShockById ?? {};
+  world.systemState.geopolitics.edgeShockPairValueById = world.systemState.geopolitics.edgeShockPairValueById ?? {};
   world.systemState.geopolitics.nextSecretSocietyId = world.systemState.geopolitics.nextSecretSocietyId ?? 1;
   world.systemState.geopolitics.nationFormationLastDay = world.systemState.geopolitics.nationFormationLastDay ?? -9999;
   world.systemState.geopolitics.nationHistory = world.systemState.geopolitics.nationHistory ?? [];
@@ -763,7 +795,16 @@ function hslToHex(h, s, l) {
 }
 
 function ensureDiplomacyPolicyState(state, key) {
-  const row = (state.diplomacyPolicies[key] = state.diplomacyPolicies[key] ?? { qByAction: {}, nByAction: {}, lastAction: "balanced" });
+  const row = (state.diplomacyPolicies[key] = state.diplomacyPolicies[key] ?? {
+    qByAction: {},
+    nByAction: {},
+    qByStateAction: {},
+    nByStateAction: {},
+    pendingByStateAction: {},
+    lastAction: "balanced",
+    lastStateKey: "global",
+    lastUpdateDay: -1
+  });
   for (const action of DIPLOMACY_RL_ACTIONS) {
     if (!Number.isFinite(row.qByAction[action])) {
       row.qByAction[action] = 0.5;
@@ -772,38 +813,96 @@ function ensureDiplomacyPolicyState(state, key) {
       row.nByAction[action] = 0;
     }
   }
+  row.qByStateAction = row.qByStateAction ?? {};
+  row.nByStateAction = row.nByStateAction ?? {};
+  row.pendingByStateAction = row.pendingByStateAction ?? {};
   return row;
 }
 
-function chooseDiplomacyAction(policy, config, rng) {
+function diplomacyStateKey(prev, context) {
+  const statusCode =
+    prev?.status === "war" ? 3
+    : prev?.status === "crisis" ? 2
+    : prev?.status === "alliance" ? 0
+    : 1;
+  const tensionBand = band3(prev?.tension ?? 0.25, 0.3, 0.62);
+  const dependenceBand = band3(context?.tradeDependence ?? 0.15, 0.12, 0.3);
+  const stressBand = band3(context?.stress ?? 0.35, 0.32, 0.58);
+  return `st${statusCode}|t${tensionBand}|d${dependenceBand}|s${stressBand}`;
+}
+
+function getPolicyQ(policy, stateKey, action) {
+  const key = `${stateKey}::${action}`;
+  const stateQ = policy.qByStateAction?.[key];
+  if (Number.isFinite(stateQ)) {
+    return stateQ;
+  }
+  return policy.qByAction?.[action] ?? 0.5;
+}
+
+function chooseDiplomacyAction(policy, stateKey, config, rng) {
   const eps = clamp(config?.rl?.diplomacyEpsilon ?? config?.rl?.epsilon ?? 0.1, 0.01, 0.45);
   if (rng.next() < eps) {
     const i = Math.floor(rng.range(0, DIPLOMACY_RL_ACTIONS.length));
     policy.lastAction = DIPLOMACY_RL_ACTIONS[i];
+    policy.lastStateKey = stateKey;
     return policy.lastAction;
   }
   let best = DIPLOMACY_RL_ACTIONS[0];
   let bestQ = -Infinity;
   for (const a of DIPLOMACY_RL_ACTIONS) {
-    const q = policy.qByAction[a] ?? 0;
+    const q = getPolicyQ(policy, stateKey, a);
     if (q > bestQ) {
       bestQ = q;
       best = a;
     }
   }
   policy.lastAction = best;
+  policy.lastStateKey = stateKey;
   return best;
 }
 
-function updateDiplomacyPolicyLearning(policy, action, outcome, config) {
-  const alpha = clamp(config?.rl?.alpha ?? 0.12, 0.01, 0.5);
+function flushDiplomacyPolicyPending(policy, alpha) {
+  const pending = policy.pendingByStateAction ?? {};
+  for (const [key, row] of Object.entries(pending)) {
+    const count = row?.count ?? 0;
+    if (count <= 0) {
+      continue;
+    }
+    const reward = (row.sum ?? 0) / count;
+    const [stateKey, action] = String(key).split("::");
+    if (!action) {
+      continue;
+    }
+    const stateActionKey = `${stateKey}::${action}`;
+    const prevStateQ = Number.isFinite(policy.qByStateAction[stateActionKey]) ? policy.qByStateAction[stateActionKey] : getPolicyQ(policy, stateKey, action);
+    policy.qByStateAction[stateActionKey] = Number((prevStateQ + alpha * (reward - prevStateQ)).toFixed(6));
+    policy.nByStateAction[stateActionKey] = (policy.nByStateAction[stateActionKey] ?? 0) + count;
+    const prevGlobal = policy.qByAction[action] ?? 0.5;
+    policy.qByAction[action] = Number((prevGlobal + alpha * (reward - prevGlobal)).toFixed(6));
+    policy.nByAction[action] = (policy.nByAction[action] ?? 0) + count;
+    pending[key] = { sum: 0, count: 0 };
+  }
+}
+
+function updateDiplomacyPolicyLearning(policy, action, stateKey, outcome, config, day) {
   const reward =
     outcome.status === "war" ? -0.9
     : outcome.status === "crisis" ? -0.35
     : clamp((outcome.relation ?? 0.5) * 0.8 - (outcome.tension ?? 0.2) * 0.7, -1, 1.4);
-  const prev = policy.qByAction[action] ?? 0.5;
-  policy.qByAction[action] = Number((prev + alpha * (reward - prev)).toFixed(6));
-  policy.nByAction[action] = (policy.nByAction[action] ?? 0) + 1;
+  const key = `${stateKey}::${action}`;
+  const row = (policy.pendingByStateAction[key] = policy.pendingByStateAction[key] ?? { sum: 0, count: 0 });
+  row.sum += reward;
+  row.count += 1;
+  const interval = Math.max(1, Math.floor(config?.rl?.diplomacyUpdateIntervalDays ?? 30));
+  const shouldUpdate = !Number.isFinite(day) || (policy.lastUpdateDay ?? -1) < 0 || day - (policy.lastUpdateDay ?? -1) >= interval;
+  if (shouldUpdate) {
+    const alpha = clamp(config?.rl?.diplomacyAlpha ?? config?.rl?.alpha ?? 0.12, 0.01, 0.5);
+    flushDiplomacyPolicyPending(policy, alpha);
+    if (Number.isFinite(day)) {
+      policy.lastUpdateDay = day;
+    }
+  }
 }
 
 function updateCurrencyRegime(world, nationStats, rng, config, day) {
@@ -930,6 +1029,92 @@ function borderFriction(world, nationAId, nationBId) {
   return total > 0 ? cross / total : 0;
 }
 
+function computeGeopoliticalHotspotInputs(world, nations) {
+  const nationHotspot = {};
+  const prices = world.systemState?.resources?.prices ?? {};
+  const energyPriceShock = clamp(((prices.energy_fossil ?? 1) + (prices.energy_renewable ?? 1)) * 0.5 - 1, 0, 1.2);
+  const migrationPairFlow = world.systemState?.migrationFlows?.pairEma ?? {};
+  for (const nation of nations ?? []) {
+    const cities = (nation.cityIds ?? []).map((id) => world.getCityById(id)).filter(Boolean);
+    const count = Math.max(1, cities.length);
+    const fractured = cities.filter((c) => c?.regime === "fractured").length / count;
+    const stressed = cities.filter((c) => c?.regime === "stressed").length / count;
+    const avgStrain = cities.reduce((sum, c) => sum + (c?.strain ?? 0), 0) / count;
+    const crossFlow = Object.entries(migrationPairFlow).reduce((sum, [k, v]) => {
+      const [aId, bId] = k.split("|");
+      if (aId === nation.id || bId === nation.id) {
+        return sum + (Number(v) || 0);
+      }
+      return sum;
+    }, 0);
+    nationHotspot[nation.id] = clamp(fractured * 0.58 + stressed * 0.22 + avgStrain * 0.2 + crossFlow * 0.18 + energyPriceShock * 0.1, 0, 1.4);
+  }
+  const spill = {};
+  for (const nation of nations ?? []) {
+    const rel = Object.entries(world.systemState?.geopolitics?.diplomacy ?? {}).filter(([k]) => k.includes(`${nation.id}|`) || k.includes(`|${nation.id}`));
+    const n = Math.max(1, rel.length);
+    const s = rel.reduce((sum, [key]) => {
+      const [a, b] = key.split("|");
+      const other = a === nation.id ? b : a;
+      return sum + (nationHotspot[other] ?? 0);
+    }, 0);
+    spill[nation.id] = clamp((s / n) * 0.35, 0, 0.8);
+  }
+  const pairFlow = {};
+  for (const [k, v] of Object.entries(migrationPairFlow)) {
+    pairFlow[k] = clamp(Number(v) || 0, 0, 1.5);
+  }
+  return { nationHotspot, spill, pairFlow, energyPriceShock };
+}
+
+function applyGeopoliticalFeedbackToCities(world, state, hotspot, config) {
+  const diplomacy = state?.diplomacy ?? {};
+  const nations = world.nations ?? [];
+  const byNationTension = {};
+  for (const nation of nations) {
+    const rows = Object.entries(diplomacy).filter(([key]) => key.includes(`${nation.id}|`) || key.includes(`|${nation.id}`));
+    const avg = rows.length
+      ? rows.reduce((sum, [, rel]) => sum + (rel?.tension ?? 0.2), 0) / rows.length
+      : 0.2;
+    byNationTension[nation.id] = clamp(avg + (hotspot.nationHotspot[nation.id] ?? 0) * 0.08, 0, 1.2);
+  }
+  for (const city of world.cities ?? []) {
+    city.lifecycle = city.lifecycle ?? {};
+    const tension = byNationTension[city.nationId] ?? 0.2;
+    const geoPriceShock = clamp(tension * 0.55 + (hotspot.energyPriceShock ?? 0) * 0.45, 0, 1.5);
+    city.lifecycle.geoPriceShock = Number((geoPriceShock * 0.28).toFixed(5));
+    city.metrics.costOfLiving = clamp(city.metrics.costOfLiving + city.lifecycle.geoPriceShock * 0.006, 0.2, 2.9);
+    city.metrics.productivity = clamp(city.metrics.productivity - city.lifecycle.geoPriceShock * 0.004, 0.2, 2.2);
+    city.metrics.trust = clamp(city.metrics.trust - city.lifecycle.geoPriceShock * 0.002, 0.02, 0.99);
+  }
+  state.edgeShockById = state.edgeShockById ?? {};
+  state.edgeShockPairValueById = state.edgeShockPairValueById ?? {};
+  for (const edge of world.edges ?? []) {
+    const a = world.getCityById(edge.fromCityId);
+    const b = world.getCityById(edge.toCityId);
+    if (!a || !b || a.nationId === b.nationId) {
+      continue;
+    }
+    const k = pairKey(a.nationId, b.nationId);
+    const pairShock = clamp((hotspot.pairFlow[k] ?? 0) * 0.8 + ((hotspot.nationHotspot[a.nationId] ?? 0) + (hotspot.nationHotspot[b.nationId] ?? 0)) * 0.2, 0, 1.2);
+    const prev = edge.geoShockLevel ?? 0;
+    let next = prev;
+    if (pairShock >= 0.32) {
+      next = 2;
+    } else if (pairShock >= 0.16) {
+      next = Math.max(1, prev);
+    } else if (prev === 2 && pairShock < 0.2) {
+      next = 1;
+    } else if (prev === 1 && pairShock < 0.1) {
+      next = 0;
+    }
+    edge.geoShockLevel = next;
+    state.edgeShockById[edge.id] = next;
+    state.edgeShockPairValueById[edge.id] = Number(pairShock.toFixed(6));
+  }
+  void config;
+}
+
 function computeTradeDependence(world) {
   const matrix = {};
   const totalByNation = new Map((world.nations ?? []).map((n) => [n.id, 0]));
@@ -996,7 +1181,20 @@ function sharedThreat(world, nationAId, nationBId) {
   return threat * 0.9;
 }
 
-function applyBorderPolicyByDiplomacy(world, diplomacy) {
+function restrictionLevel(value) {
+  return value === "sealed" ? 2 : value === "permit" ? 1 : 0;
+}
+
+function levelToRestriction(level) {
+  return level >= 2 ? "sealed" : level >= 1 ? "permit" : "open";
+}
+
+function applyBorderPolicyByDiplomacy(world, diplomacy, state = null, config = null) {
+  const stats = { open: 0, permit: 0, sealed: 0, changedThisTick: 0 };
+  const permitLockTicks = Math.max(12, Math.floor(config?.geopolitics?.restrictionPermitLockTicks ?? 48));
+  const sealedLockTicks = Math.max(24, Math.floor(config?.geopolitics?.restrictionSealedLockTicks ?? 96));
+  const sealedReleaseShockThreshold = clamp(config?.geopolitics?.sealedReleaseShockThreshold ?? 0.14, 0.02, 0.4);
+  const permitReleaseShockThreshold = clamp(config?.geopolitics?.permitReleaseShockThreshold ?? 0.07, 0.01, 0.25);
   for (const edge of world.edges) {
     const a = world.getCityById(edge.fromCityId);
     const b = world.getCityById(edge.toCityId);
@@ -1007,20 +1205,57 @@ function applyBorderPolicyByDiplomacy(world, diplomacy) {
     if (!rel) {
       continue;
     }
-    if (rel.status === "war") {
-      edge.gatewayRestriction = "sealed";
+    const diplomaticLevel =
+      rel.status === "war" ? 2
+      : rel.status === "crisis" ? 1
+      : 0;
+    const shockLevel = state?.edgeShockById?.[edge.id] ?? edge.geoShockLevel ?? 0;
+    const pairShock = state?.edgeShockPairValueById?.[edge.id] ?? (shockLevel >= 2 ? 0.32 : shockLevel >= 1 ? 0.16 : 0);
+    const currentLevel = restrictionLevel(edge.gatewayRestriction);
+    let targetLevel = Math.max(diplomaticLevel, shockLevel);
+    const prevLock = Math.max(0, Math.floor(edge.restrictionLockTicks ?? 0));
+    let lock = prevLock;
+    if (prevLock > 0) {
+      lock = prevLock - 1;
+      targetLevel = Math.max(targetLevel, currentLevel);
+    } else {
+      if (targetLevel >= 2 && diplomaticLevel < 2 && pairShock < sealedReleaseShockThreshold) {
+        targetLevel = 1;
+      }
+      if (targetLevel === 1 && diplomaticLevel === 0 && pairShock < permitReleaseShockThreshold) {
+        targetLevel = 0;
+      }
+      if (targetLevel < currentLevel) {
+        targetLevel = Math.max(currentLevel - 1, targetLevel);
+      }
+    }
+    if (targetLevel > currentLevel) {
+      lock = targetLevel >= 2 ? sealedLockTicks : permitLockTicks;
+    } else if (targetLevel === currentLevel && targetLevel > 0 && pairShock >= permitReleaseShockThreshold) {
+      lock = Math.max(lock, targetLevel >= 2 ? Math.floor(sealedLockTicks * 0.5) : Math.floor(permitLockTicks * 0.5));
+    }
+    edge.restrictionLockTicks = lock;
+    if (targetLevel !== currentLevel) {
+      stats.changedThisTick += 1;
+    }
+    edge.gatewayRestriction = levelToRestriction(targetLevel);
+    if (targetLevel >= 2) {
       edge.connectivity = clamp(edge.connectivity * 0.84, 0.08, 0.92);
-    } else if (rel.status === "crisis") {
-      edge.gatewayRestriction = "permit";
+    } else if (targetLevel === 1) {
       edge.connectivity = clamp(edge.connectivity * 0.95, 0.08, 0.95);
     } else {
-      if (edge.gatewayRestriction === "sealed") {
-        edge.gatewayRestriction = "permit";
-      } else {
-        edge.gatewayRestriction = "open";
-      }
       edge.connectivity = clamp(edge.connectivity + 0.01, 0.1, 0.98);
     }
+    if (targetLevel >= 2) {
+      stats.sealed += 1;
+    } else if (targetLevel === 1) {
+      stats.permit += 1;
+    } else {
+      stats.open += 1;
+    }
+  }
+  if (state) {
+    state.edgeRestrictionStats = stats;
   }
 }
 
@@ -1317,11 +1552,14 @@ function applySecretSocietyActionEffects({ world, state, society, action, rng, e
 }
 
 function updateSecretSocietyPolicyLearning(policy, action, outcome, config) {
-  const alpha = clamp(config?.rl?.alpha ?? 0.12, 0.01, 0.5);
+  const alpha = clamp(config?.rl?.secretSocietyAlpha ?? config?.rl?.alpha ?? 0.12, 0.01, 0.4);
   const infGain = (outcome.society.influence ?? 0) - (outcome.prevInfluence ?? 0);
   const secGain = (outcome.society.secrecy ?? 0) - (outcome.prevSecrecy ?? 0);
   const memberGain = ((outcome.society.members ?? 0) - (outcome.prevMembers ?? 0)) / 120;
   const reward = clamp(infGain * 3.6 + secGain * 1.8 + memberGain + (outcome.actionFx?.impactScore ?? 0) * 0.2, -1.2, 2.4);
+  for (const key of Object.keys(policy.qByAction ?? {})) {
+    policy.qByAction[key] = Number((policy.qByAction[key] * 0.995).toFixed(6));
+  }
   const prev = policy.qByAction[action] ?? 0.5;
   policy.qByAction[action] = Number((prev + alpha * (reward - prev)).toFixed(6));
   policy.nByAction[action] = (policy.nByAction[action] ?? 0) + 1;

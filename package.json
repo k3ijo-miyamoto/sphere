@@ -16,7 +16,9 @@
     "report:emergence": "node scripts/multiSeedReport.js",
     "report:stratification": "node scripts/stratificationReport.js",
     "report:geopolitics": "node scripts/geopoliticsTensionReport.js",
-    "report:clustered-init": "node scripts/clusteredInitScenario.js"
+    "report:richest-person": "node scripts/richestPersonReport.js",
+    "report:clustered-init": "node scripts/clusteredInitScenario.js",
+    "report:generative-principles": "node scripts/generativePrinciplesCheck.js"
   },
   "engines": {
     "node": ">=20"
