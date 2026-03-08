@@ -5,6 +5,8 @@ import { buildFlowParticles } from "../render/flowView.js";
 import { PopulationSystem } from "./population.js";
 import { updateCityDynamics } from "./cityDynamics.js";
 import { updateGeopolitics } from "./geopolitics.js";
+import { updateSphereDynamics } from "./sphereDynamics.js";
+import { updateInformationDynamics } from "./informationDynamics.js";
 import { createSnapshot, loadSnapshot } from "./snapshot.js";
 
 export class SimulationEngine {
@@ -32,6 +34,30 @@ export class SimulationEngine {
       dayOfWeek,
       isWeekend
     });
+    const sphereDynamics = updateSphereDynamics({
+      world: this.world,
+      people: this.population.people,
+      config: this.config,
+      rng: this.rng,
+      day: this.clock.day,
+      phase
+    });
+    const informationDynamics = updateInformationDynamics({
+      world: this.world,
+      people: this.population.people,
+      config: this.config,
+      rng: this.rng,
+      day: this.clock.day,
+      phase
+    });
+    const populationActionRecent = peopleFrame.actions?.recent ?? [];
+    const populationActionCounts = peopleFrame.actions?.counts ?? {};
+    const infoActionRecent = informationDynamics.actions?.recent ?? [];
+    const infoActionCounts = informationDynamics.actions?.counts ?? {};
+    peopleFrame.actions = {
+      counts: mergeActionCounts(populationActionCounts, infoActionCounts),
+      recent: [...populationActionRecent, ...infoActionRecent].slice(-240)
+    };
     const cityDynamics = updateCityDynamics({ world: this.world, frame: { people: peopleFrame }, config: this.config, rng: this.rng });
     const forceGeopoliticsTick = this.world.systemState?.systemicTriggers?.forceGeopoliticsTick ?? false;
     const geopolitics = updateGeopolitics({
@@ -56,7 +82,7 @@ export class SimulationEngine {
       dayOfWeek,
       isWeekend,
       worldVersion: this.world.version,
-      system: { ...this.world.systemState, cityDynamics },
+      system: { ...this.world.systemState, cityDynamics, sphereDynamics, informationDynamics },
       flows,
       particles,
       people: peopleFrame,
@@ -98,4 +124,13 @@ export class SimulationEngine {
     const frame = this.history[next];
     return { ...frame, historyCursor: next, historyLength: this.history.length };
   }
+}
+
+function mergeActionCounts(a, b) {
+  const keys = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
+  const out = {};
+  for (const k of keys) {
+    out[k] = (a?.[k] ?? 0) + (b?.[k] ?? 0);
+  }
+  return out;
 }

@@ -93,6 +93,7 @@ export class PopulationSystem {
   }
 
   tick({ phase, day, minuteOfDay = 0, dayOfWeek = 0, isWeekend = false }) {
+    const roleActionLog = [];
     for (const person of this.people) {
       ensurePersonGenetics(person, this.rng);
       const nextState = resolveState(person, phase, this.rng, isWeekend);
@@ -136,7 +137,7 @@ export class PopulationSystem {
       isWeekend,
       weekendBoost: this.config.weekly?.weekendReligionBoost ?? 1
     });
-    applyRelocationMigration({
+    const migrationResult = applyRelocationMigration({
       people: this.people,
       world: this.world,
       rng: this.rng,
@@ -147,6 +148,19 @@ export class PopulationSystem {
       religionCompatibilityWeight: this.config.migration?.religionCompatibilityWeight ?? 0.12,
       banditConfig: this.config.migration?.bandit ?? {}
     });
+    if (migrationResult?.actions?.length) {
+      roleActionLog.push(...migrationResult.actions);
+    }
+    const communityResult = applyCommunityMembershipDynamics({
+      people: this.people,
+      world: this.world,
+      rng: this.rng,
+      phase,
+      day
+    });
+    if (communityResult?.actions?.length) {
+      roleActionLog.push(...communityResult.actions);
+    }
 
     const stateCounts = { Home: 0, Commute: 0, Work: 0, Leisure: 0, Sleep: 0 };
     const cityPresence = new Map(this.world.cities.map((city) => [city.id, 0]));
@@ -249,6 +263,10 @@ export class PopulationSystem {
     }
 
     const economy = computeEconomySummary(this.people, this.world);
+    this.world.systemState = this.world.systemState ?? {};
+    this.world.systemState.lastEconomyByCity = Object.fromEntries(
+      (economy.byCity ?? []).map((row) => [row.cityId, row])
+    );
     const companySummary = computeCompanySummary(this.companies, this.world);
     const phaseTransition = computePhaseTransitionSignals({
       world: this.world,
@@ -292,7 +310,8 @@ export class PopulationSystem {
       demographics: demographics.summary,
       lineage,
       socialNetwork,
-      institutions
+      institutions,
+      actions: summarizePopulationActionLog(roleActionLog)
     };
   }
 }
@@ -340,7 +359,7 @@ function updateInstitutionalSystem({ people, world, config, rng, phase, day, sta
     if (phase === "Daytime") {
       applyOperationalEffects(city, bestAction, cooperationIndex);
       reinforceWorkStrategies(workers, bestAction, cooperationIndex, city);
-      cityPolicy.lastObservedReward = computeCityGovernanceReward(city, cooperationIndex);
+      cityPolicy.lastObservedReward = computeCityGovernanceReward(city, cooperationIndex, world);
     }
     byCity[city.id] = {
       bestAction,
@@ -960,9 +979,11 @@ function updateEducationPolicies({ world, config, institutionState, schoolOutcom
 
 function updateInstitutionPolicies({ world, config, institutionState, day, rng }) {
   const actions = ["balanced_focus", "security_focus", "justice_focus", "welfare_focus", "growth_focus"];
+  const threshold = clamp((config?.employment?.unemploymentResponseThreshold ?? 18) / 100, 0.05, 0.9);
+  const targetCityId = config?.policy?.targetEmploymentCityId ? String(config.policy.targetEmploymentCityId) : null;
   for (const city of world.cities) {
     const cityState = institutionState.cities[city.id];
-    const reward = computeCityGovernanceReward(city, 0.5);
+    const reward = computeCityGovernanceReward(city, 0.5, world);
     const prevAction = cityState.currentAction ?? "balanced_focus";
     const prevQ = cityState.qByAction[prevAction] ?? reward;
     const alpha = institutionState.learningRate;
@@ -976,6 +997,16 @@ function updateInstitutionPolicies({ world, config, institutionState, day, rng }
       nextAction = actions
         .slice()
         .sort((a, b) => (cityState.qByAction[b] ?? 0) - (cityState.qByAction[a] ?? 0))[0];
+    }
+    const unemployment = getCityUnemploymentRate(world, city.id);
+    if (targetCityId && city.id === targetCityId && unemployment != null && unemployment > threshold) {
+      const pressure = clamp((unemployment - threshold) / Math.max(0.05, 1 - threshold), 0, 1);
+      const forcedAction =
+        pressure >= 0.55 || city.metrics?.productivity < 0.8 ? "growth_focus"
+        : "welfare_focus";
+      if (rng.next() < 0.6 + pressure * 0.35) {
+        nextAction = forcedAction;
+      }
     }
     cityState.lastAction = prevAction;
     cityState.currentAction = nextAction;
@@ -1266,13 +1297,28 @@ function mutateInstitutionWeights(cityState, rng) {
   };
 }
 
-function computeCityGovernanceReward(city, cooperationIndex) {
+function getCityUnemploymentRate(world, cityId) {
+  const byCity = world?.systemState?.lastEconomyByCity;
+  if (!byCity) {
+    return null;
+  }
+  const row = byCity[cityId];
+  if (!row) {
+    return null;
+  }
+  return clamp((row.unemploymentRate ?? 0) / 100, 0, 1);
+}
+
+function computeCityGovernanceReward(city, cooperationIndex, world = null) {
+  const unemployment = getCityUnemploymentRate(world, city.id);
+  const unemploymentScore = unemployment == null ? 0.7 : 1 - unemployment;
   return clamp(
     city.metrics.trust * 0.26 +
       city.metrics.safety * 0.24 +
       city.metrics.productivity * 0.14 +
       (1 - city.metrics.instabilityRisk) * 0.24 +
-      (1 - city.metrics.inequality) * 0.12 +
+      (1 - city.metrics.inequality) * 0.08 +
+      unemploymentScore * 0.08 +
       cooperationIndex * 0.2,
     0,
     1.8
@@ -1433,6 +1479,65 @@ function updateEpigeneticsAndPhenotype(person, world, phase, rng) {
   person.ability = phenotype.ability;
 }
 
+function computeEmploymentPolicySupport({
+  world,
+  city,
+  config,
+  targetCityId,
+  baseEmploymentBoost,
+  boostInWindow,
+  boostRegimeOnly,
+  workers
+}) {
+  const isTargetCityInWindow =
+    targetCityId &&
+    city.id === targetCityId &&
+    boostInWindow;
+  const regimeEligible = !boostRegimeOnly || city.regime === "stressed" || city.regime === "fractured";
+  const targetedSupport = isTargetCityInWindow
+    ? clamp(
+        baseEmploymentBoost *
+          (regimeEligible ? 1 : 0.45) *
+          (0.6 + (config?.policy?.welfareBudget ?? 0.5) * 0.25 + (config?.policy?.safetyBudget ?? 0.5) * 0.15),
+        0,
+        0.28
+      )
+    : 0;
+  if (!(targetCityId && city.id === targetCityId)) {
+    return targetedSupport;
+  }
+  const cityPolicy = world?.systemState?.institutions?.cities?.[city.id] ?? null;
+  const action = cityPolicy?.currentAction ?? "balanced_focus";
+  const actionBoost = clamp(
+    config?.employment?.policyActionEmploymentBoost?.[action] ??
+      config?.employment?.policyActionEmploymentBoost?.balanced_focus ??
+      0.4,
+    0,
+    1.2
+  );
+  const welfarePressure = clamp(
+    (config?.policy?.welfareBudget ?? 0.5) * 0.65 + (config?.policy?.safetyBudget ?? 0.5) * 0.35,
+    0,
+    1
+  );
+  const threshold = clamp((config?.employment?.unemploymentResponseThreshold ?? 18) / 100, 0.05, 0.9);
+  const lastUnemployment = getCityUnemploymentRate(world, city.id);
+  const inferredUnemployment = clamp(1 - (city.metrics?.employmentCapacity ?? 0.5), 0, 1);
+  const unemployment = lastUnemployment ?? inferredUnemployment;
+  const pressure = clamp((unemployment - threshold) / Math.max(0.05, 1 - threshold), 0, 1);
+  const crowdFactor = clamp((workers?.length ?? 0) / Math.max(1, city.population ?? 1), 0.04, 1);
+  const adaptiveSupport = clamp(
+    pressure *
+      (config?.employment?.unemploymentResponseScale ?? 0.3) *
+      actionBoost *
+      welfarePressure *
+      (0.6 + crowdFactor * 0.4),
+    0,
+    0.2
+  );
+  return clamp(targetedSupport + adaptiveSupport, 0, 0.32);
+}
+
 function applyEmploymentAndEconomy({
   people,
   world,
@@ -1474,7 +1579,8 @@ function applyEmploymentAndEconomy({
       }
       continue;
     }
-    if (person.currentState === "Work") {
+    const isJobSeekingAdult = !person.employed && person.age >= 18 && person.age <= 75;
+    if (person.currentState === "Work" || (phase === "Daytime" && isJobSeekingAdult)) {
       workersByCity.get(person.currentCityId)?.push(person);
     } else if (phase === "Night" && rng.next() < 0.04) {
       person.employerId = null;
@@ -1505,15 +1611,17 @@ function applyEmploymentAndEconomy({
     const globalTick = Math.max(0, day * ticksPerDay + tickOfDay);
     const boostInWindow = boostTicksLimit <= 0 || globalTick <= boostTicksLimit;
     const boostRegimeOnly = config?.policy?.targetEmploymentBoostRegimeOnly !== false;
-    const cityCapacityBoost =
-      targetCityId && city.id === targetCityId && boostInWindow && (!boostRegimeOnly || city.regime === "stressed" || city.regime === "fractured")
-        ? clamp(
-            baseEmploymentBoost *
-              (0.7 + (config?.policy?.welfareBudget ?? 0.5) * 0.2 + (config?.policy?.safetyBudget ?? 0.5) * 0.1),
-            0,
-            0.32
-          )
-        : 0;
+    const cityPolicySupportBase = computeEmploymentPolicySupport({
+      world,
+      city,
+      config,
+      targetCityId,
+      baseEmploymentBoost,
+      boostInWindow,
+      boostRegimeOnly,
+      workers
+    });
+    const cityCapacityBoost = clamp(cityPolicySupportBase * 0.9, 0, 0.32);
     const cityBaseCapacity =
       cityCompanies.length > 0
         ? Math.max(1, Math.floor(companyCapacity * city.population * 0.06))
@@ -1525,7 +1633,8 @@ function applyEmploymentAndEconomy({
       cityBaseCapacity: boostedCityBaseCapacity,
       workerCount: workers.length,
       epidemic,
-      climate
+      climate,
+      policySupport: cityPolicySupportBase
     });
     const capacity = companyOpenings.totalOpenings;
     for (const c of cityCompanies) {
@@ -1558,15 +1667,7 @@ function applyEmploymentAndEconomy({
       const baseHireShareFloor = clamp(config?.employment?.baseHireShareFloor ?? 0.08, 0.01, 0.3);
       const policyCoupling = clamp(config?.employment?.baseHirePolicyCoupling ?? 0.12, 0, 0.5);
       const stabilityCoupling = clamp(config?.employment?.baseHireStabilityCoupling ?? 0.08, 0, 0.3);
-      const cityPolicySupport =
-        targetCityId && city.id === targetCityId && boostInWindow && (!boostRegimeOnly || city.regime === "stressed" || city.regime === "fractured")
-          ? clamp(
-              baseEmploymentBoost *
-                (0.6 + (config?.policy?.welfareBudget ?? 0.5) * 0.25 + (config?.policy?.safetyBudget ?? 0.5) * 0.15),
-              0,
-              0.28
-            )
-          : 0;
+      const cityPolicySupport = cityPolicySupportBase;
       const stabilityFactor = clamp(1 + ((city.metrics?.safety ?? 0.5) - (city.metrics?.instabilityRisk ?? 0.3)) * stabilityCoupling, 0.85, 1.2);
       let baseHireShareEffective = clamp(baseHire * regimeMult * (1 + cityPolicySupport * policyCoupling) * stabilityFactor, 0, 1);
       if (baseHire === 0) {
@@ -2753,7 +2854,7 @@ function applyRelocationMigration({
   banditConfig: banditOverrides = {}
 }) {
   if (phase !== "Night") {
-    return;
+    return { moves: 0, actions: [] };
   }
   world.systemState = world.systemState ?? {};
   world.systemState.migrationFlows = world.systemState.migrationFlows ?? {
@@ -2791,6 +2892,8 @@ function applyRelocationMigration({
     ...banditOverrides
   };
   const cityIds = world.cities.map((c) => c.id);
+  const actions = [];
+  let moves = 0;
   for (const person of people) {
     if (person.age < 18) {
       continue;
@@ -2899,6 +3002,14 @@ function applyRelocationMigration({
       person.mobility.cityAffinity[bestId] = clamp01((person.mobility.cityAffinity[bestId] ?? 0.35) + 0.08);
       person.mobility.cityAffinity[person.homeCityId] = clamp01((person.mobility.cityAffinity[person.homeCityId] ?? 0.4) - 0.04);
       person.homeCityId = bestId;
+      moves += 1;
+      actions.push({
+        type: "migrate",
+        actorId: person.id,
+        fromCityId: prevHome,
+        toCityId: bestId,
+        day
+      });
       const fromNation = world.getCityById(prevHome)?.nationId ?? null;
       const toNation = world.getCityById(bestId)?.nationId ?? null;
       if (fromNation && toNation && fromNation !== toNation) {
@@ -2917,6 +3028,84 @@ function applyRelocationMigration({
       person.mobility.cityAffinity[person.homeCityId] = clamp01((person.mobility.cityAffinity[person.homeCityId] ?? 0.4) + 0.02);
     }
   }
+  return { moves, actions };
+}
+
+function applyCommunityMembershipDynamics({ people, world, rng, phase, day }) {
+  if (phase !== "Night") {
+    return { joinCount: 0, leaveCount: 0, actions: [] };
+  }
+  const communities = world.communities ?? [];
+  if (!communities.length) {
+    return { joinCount: 0, leaveCount: 0, actions: [] };
+  }
+  let joinCount = 0;
+  let leaveCount = 0;
+  const actions = [];
+  for (const person of people) {
+    person.communityIds = Array.isArray(person.communityIds) ? person.communityIds : [];
+    const cityId = person.currentCityId ?? person.homeCityId;
+    const localCommunities = communities.filter((c) => (c.memberCityUids ?? []).includes(cityId));
+    if (!localCommunities.length) {
+      continue;
+    }
+    const joinProb = clamp(
+      0.002 + (person.traits?.sociability ?? 0.5) * 0.008 + (person.traits?.conformity ?? 0.5) * 0.004,
+      0,
+      0.05
+    );
+    const leaveProb = clamp(
+      0.001 + (person.traits?.openness ?? 0.5) * 0.006 + (1 - (person.householdStability ?? 0.6)) * 0.003,
+      0,
+      0.04
+    );
+
+    if (person.communityIds.length < 3 && rng.next() < joinProb) {
+      const candidates = localCommunities.filter((c) => !person.communityIds.includes(c.id));
+      if (candidates.length > 0) {
+        const com = pickOne(candidates, rng);
+        if (com) {
+          person.communityIds.push(com.id);
+          joinCount += 1;
+          actions.push({
+            type: "join",
+            actorId: person.id,
+            communityId: com.id,
+            cityId,
+            day
+          });
+        }
+      }
+    }
+    if (person.communityIds.length > 0 && rng.next() < leaveProb) {
+      const idx = Math.floor(rng.range(0, person.communityIds.length));
+      const communityId = person.communityIds.splice(Math.max(0, Math.min(person.communityIds.length - 1, idx)), 1)[0];
+      if (communityId) {
+        leaveCount += 1;
+        actions.push({
+          type: "leave",
+          actorId: person.id,
+          communityId,
+          cityId,
+          day
+        });
+      }
+    }
+  }
+  return { joinCount, leaveCount, actions };
+}
+
+function summarizePopulationActionLog(actions) {
+  const counts = { join: 0, leave: 0, migrate: 0 };
+  for (const row of actions ?? []) {
+    if (Object.prototype.hasOwnProperty.call(counts, row.type)) {
+      counts[row.type] += 1;
+    }
+  }
+  return {
+    counts,
+    recent: (actions ?? []).slice(-220)
+  };
 }
 
 function ensureMobilityModel(mobility) {
@@ -4761,7 +4950,7 @@ function pickEmployer(person, cityCompanies, rng, world) {
   return best;
 }
 
-function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, workerCount, epidemic, climate }) {
+function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, workerCount, epidemic, climate, policySupport = 0 }) {
   const byCompany = new Map();
   if (!cityCompanies || cityCompanies.length === 0) {
     return { totalOpenings: cityBaseCapacity, byCompany };
@@ -4775,7 +4964,8 @@ function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, wo
     byCompany.set(company.id, base);
     totalRaw += base;
   }
-  const workerBound = Math.max(0, Math.floor((workerCount ?? 0) * 1.08));
+  const support = clamp(policySupport, 0, 0.32);
+  const workerBound = Math.max(0, Math.floor((workerCount ?? 0) * (1.08 + support * 1.4)));
   const target = Math.max(0, Math.min(Math.floor(cityBaseCapacity * shockPenalty), workerBound));
   let totalOpenings = 0;
   for (const company of cityCompanies) {
@@ -4789,7 +4979,8 @@ function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, wo
     byCompany.set(cityCompanies[0].id, 1);
     totalOpenings = 1;
   }
-  const cityEmploymentCap = Math.max(1, Math.floor((city.population ?? 1000) * (city.metrics?.employmentCapacity ?? 0.6) * 0.1));
+  const effectiveEmploymentCapacity = clamp((city.metrics?.employmentCapacity ?? 0.6) + support * 0.55, 0.08, 1.2);
+  const cityEmploymentCap = Math.max(1, Math.floor((city.population ?? 1000) * effectiveEmploymentCapacity * 0.1));
   totalOpenings = Math.min(totalOpenings, cityEmploymentCap);
   return { totalOpenings, byCompany };
 }

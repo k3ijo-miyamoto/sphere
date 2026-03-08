@@ -1,11 +1,27 @@
 import { Rng } from "../core/rng.js";
 
 export class SphereWorld {
-  constructor({ layers = [], cities = [], edges = [], nations = [], systemState = null } = {}) {
+  constructor({
+    layers = [],
+    geoZones = [],
+    cities = [],
+    edges = [],
+    nations = [],
+    spheres = [],
+    communities = [],
+    institutions = [],
+    citySphereState = {},
+    systemState = null
+  } = {}) {
     this.layers = layers;
+    this.geoZones = geoZones;
     this.cities = cities;
     this.edges = edges;
     this.nations = nations;
+    this.spheres = spheres;
+    this.communities = communities;
+    this.institutions = institutions;
+    this.citySphereState = citySphereState;
     this.cityIndex = new Map(cities.map((city) => [city.id, city]));
     this.nationIndex = new Map(nations.map((nation) => [nation.id, nation]));
     this.version = 1;
@@ -36,6 +52,9 @@ export class SphereWorld {
         }
       };
     ensureCurrencyState(this);
+    ensureSphereState(this);
+    ensureCityGeoZoneState(this);
+    ensureRoleLayerState(this);
   }
 
   getCityById(cityId) {
@@ -188,37 +207,43 @@ export function createSampleWorld(seed = 1337) {
   const rng = new Rng(seed);
 
   const layers = [
-    { id: "L1", name: "Inner Core", accessLevel: "restricted" },
-    { id: "L2", name: "Urban Belt", accessLevel: "mixed" },
-    { id: "L3", name: "Outer Ring", accessLevel: "open" }
+    { id: "Layer0", name: "Person", roleType: "person" },
+    { id: "Layer1", name: "Community", roleType: "community" },
+    { id: "Layer2", name: "Institution", roleType: "institution" }
+  ];
+
+  const geoZones = [
+    { id: "G1", name: "Inner Core", accessLevel: "restricted" },
+    { id: "G2", name: "Urban Belt", accessLevel: "mixed" },
+    { id: "G3", name: "Outer Ring", accessLevel: "open" }
   ];
 
   const cities = [
-    createCity("C1", "Helio", "L3", "residential", rng, { lat: 12, lon: -30 }),
-    createCity("C2", "Merca", "L2", "workHub", rng, { lat: 16, lon: 5 }),
-    createCity("C3", "Nava", "L3", "mixed", rng, { lat: -4, lon: 50 }),
-    createCity("C4", "Atria", "L2", "workHub", rng, { lat: -18, lon: -75 }),
-    createCity("C5", "Vale", "L1", "mixed", rng, { lat: 32, lon: 110 }),
-    createCity("C6", "Orion", "L3", "residential", rng, { lat: 40, lon: -115 }),
-    createCity("C7", "Lumen", "L2", "workHub", rng, { lat: 8, lon: 92 }),
-    createCity("C8", "Brink", "L1", "mixed", rng, { lat: -28, lon: 130 }),
-    createCity("C9", "Cairox", "L3", "mixed", rng, { lat: -36, lon: 8 }),
-    createCity("C10", "Vesta", "L2", "residential", rng, { lat: 24, lon: -150 }),
-    createCity("C11", "Riven", "L1", "workHub", rng, { lat: 5, lon: -168 }),
-    createCity("C12", "Kepler", "L2", "mixed", rng, { lat: -42, lon: 76 }),
-    createCity("C13", "Solis", "L3", "residential", rng, { lat: 48, lon: 28 }),
-    createCity("C14", "Noct", "L1", "mixed", rng, { lat: -6, lon: -112 }),
-    createCity("C15", "Talon", "L2", "workHub", rng, { lat: 14, lon: 146 }),
-    createCity("C16", "Fjord", "L3", "residential", rng, { lat: 55, lon: -42 }),
-    createCity("C17", "Mistral", "L2", "mixed", rng, { lat: -22, lon: -142 }),
-    createCity("C18", "Pavo", "L1", "workHub", rng, { lat: 2, lon: 122 }),
-    createCity("C19", "Galea", "L3", "mixed", rng, { lat: 36, lon: 64 }),
-    createCity("C20", "Iris", "L2", "residential", rng, { lat: -48, lon: -18 }),
-    createCity("C21", "Quill", "L1", "mixed", rng, { lat: 18, lon: -84 }),
-    createCity("C22", "Rook", "L3", "workHub", rng, { lat: -12, lon: 168 }),
-    createCity("C23", "Sable", "L2", "mixed", rng, { lat: 44, lon: -170 }),
-    createCity("C24", "Thorn", "L1", "residential", rng, { lat: -30, lon: 34 }),
-    createCity("C25", "Umber", "L2", "workHub", rng, { lat: 10, lon: -6 })
+    createCity("C1", "Helio", "G3", "residential", rng, { lat: 12, lon: -30 }),
+    createCity("C2", "Merca", "G2", "workHub", rng, { lat: 16, lon: 5 }),
+    createCity("C3", "Nava", "G3", "mixed", rng, { lat: -4, lon: 50 }),
+    createCity("C4", "Atria", "G2", "workHub", rng, { lat: -18, lon: -75 }),
+    createCity("C5", "Vale", "G1", "mixed", rng, { lat: 32, lon: 110 }),
+    createCity("C6", "Orion", "G3", "residential", rng, { lat: 40, lon: -115 }),
+    createCity("C7", "Lumen", "G2", "workHub", rng, { lat: 8, lon: 92 }),
+    createCity("C8", "Brink", "G1", "mixed", rng, { lat: -28, lon: 130 }),
+    createCity("C9", "Cairox", "G3", "mixed", rng, { lat: -36, lon: 8 }),
+    createCity("C10", "Vesta", "G2", "residential", rng, { lat: 24, lon: -150 }),
+    createCity("C11", "Riven", "G1", "workHub", rng, { lat: 5, lon: -168 }),
+    createCity("C12", "Kepler", "G2", "mixed", rng, { lat: -42, lon: 76 }),
+    createCity("C13", "Solis", "G3", "residential", rng, { lat: 48, lon: 28 }),
+    createCity("C14", "Noct", "G1", "mixed", rng, { lat: -6, lon: -112 }),
+    createCity("C15", "Talon", "G2", "workHub", rng, { lat: 14, lon: 146 }),
+    createCity("C16", "Fjord", "G3", "residential", rng, { lat: 55, lon: -42 }),
+    createCity("C17", "Mistral", "G2", "mixed", rng, { lat: -22, lon: -142 }),
+    createCity("C18", "Pavo", "G1", "workHub", rng, { lat: 2, lon: 122 }),
+    createCity("C19", "Galea", "G3", "mixed", rng, { lat: 36, lon: 64 }),
+    createCity("C20", "Iris", "G2", "residential", rng, { lat: -48, lon: -18 }),
+    createCity("C21", "Quill", "G1", "mixed", rng, { lat: 18, lon: -84 }),
+    createCity("C22", "Rook", "G3", "workHub", rng, { lat: -12, lon: 168 }),
+    createCity("C23", "Sable", "G2", "mixed", rng, { lat: 44, lon: -170 }),
+    createCity("C24", "Thorn", "G1", "residential", rng, { lat: -30, lon: 34 }),
+    createCity("C25", "Umber", "G2", "workHub", rng, { lat: 10, lon: -6 })
   ];
 
   const edges = [
@@ -261,15 +286,19 @@ export function createSampleWorld(seed = 1337) {
   ];
 
   const nations = createInitialNations(cities, rng);
-  return new SphereWorld({ layers, cities, edges, nations });
+  const spheres = createDefaultSpheres();
+  const citySphereState = createInitialCitySphereState(cities, spheres, rng);
+  const communities = createDefaultCommunities(cities, rng);
+  const institutions = createDefaultInstitutions(cities);
+  return new SphereWorld({ layers, geoZones, cities, edges, nations, spheres, communities, institutions, citySphereState });
 }
 
-function createCity(id, name, layerId, cityType, rng, geo) {
+function createCity(id, name, geoZoneId, cityType, rng, geo) {
   const population = Math.floor(rng.range(4000, 15000));
   return {
     id,
     name,
-    layerId,
+    geoZoneId,
     cityType,
     geo,
     population,
@@ -443,4 +472,166 @@ function ensureCurrencyState(world) {
       cur.policyRate[nation.id] = 0.02;
     }
   }
+}
+
+function ensureSphereState(world) {
+  world.spheres = world.spheres ?? [];
+  world.communities = world.communities ?? [];
+  world.institutions = world.institutions ?? [];
+  world.citySphereState = world.citySphereState ?? {};
+}
+
+function ensureCityGeoZoneState(world) {
+  const fallback = "G2";
+  for (const city of world.cities ?? []) {
+    if (!city.geoZoneId) {
+      city.geoZoneId = mapLegacyLayerToGeoZone(city.layerId) ?? fallback;
+    }
+    if (city.layerId && /^L\d+$/i.test(String(city.layerId))) {
+      delete city.layerId;
+    }
+  }
+  world.geoZones = world.geoZones ?? [
+    { id: "G1", name: "Inner Core", accessLevel: "restricted" },
+    { id: "G2", name: "Urban Belt", accessLevel: "mixed" },
+    { id: "G3", name: "Outer Ring", accessLevel: "open" }
+  ];
+}
+
+function ensureRoleLayerState(world) {
+  const hasLegacyGeoLayers =
+    Array.isArray(world.layers) &&
+    world.layers.length > 0 &&
+    world.layers.every((l) => /^L\d+$/i.test(String(l?.id ?? "")));
+  if (hasLegacyGeoLayers && (!Array.isArray(world.geoZones) || world.geoZones.length === 0)) {
+    world.geoZones = world.layers.map((l) => ({
+      id:
+        l.id === "L1" ? "G1"
+        : l.id === "L2" ? "G2"
+        : l.id === "L3" ? "G3"
+        : `G${String(l.id).replace(/\D+/g, "") || "2"}`,
+      name: l.name ?? "Geo Zone",
+      accessLevel: l.accessLevel ?? "mixed"
+    }));
+  }
+  world.layers = [
+    { id: "Layer0", name: "Person", roleType: "person" },
+    { id: "Layer1", name: "Community", roleType: "community" },
+    { id: "Layer2", name: "Institution", roleType: "institution" }
+  ];
+}
+
+function mapLegacyLayerToGeoZone(layerId) {
+  if (layerId === "L1") {
+    return "G1";
+  }
+  if (layerId === "L2") {
+    return "G2";
+  }
+  if (layerId === "L3") {
+    return "G3";
+  }
+  return null;
+}
+
+function createDefaultSpheres() {
+  return [
+    {
+      id: "S1",
+      name: "Open Sphere",
+      nestLevel: 0,
+      rankingPolicy: "neutral",
+      moderationStrength: 0.45,
+      shareFriction: 0.28,
+      botPressure: 0.14,
+      credibilityWeight: 0.56,
+      crossSphereFriction: 0.22
+    },
+    {
+      id: "S2",
+      name: "Amplifier Sphere",
+      nestLevel: 1,
+      rankingPolicy: "outrage_boost",
+      moderationStrength: 0.2,
+      shareFriction: 0.15,
+      botPressure: 0.38,
+      credibilityWeight: 0.34,
+      crossSphereFriction: 0.32
+    },
+    {
+      id: "S3",
+      name: "Curated Sphere",
+      nestLevel: 2,
+      rankingPolicy: "health_boost",
+      moderationStrength: 0.72,
+      shareFriction: 0.42,
+      botPressure: 0.08,
+      credibilityWeight: 0.74,
+      crossSphereFriction: 0.4
+    }
+  ];
+}
+
+function createInitialCitySphereState(cities, spheres, rng) {
+  const out = {};
+  for (const city of cities ?? []) {
+    out[city.id] = {};
+    for (const sphere of spheres ?? []) {
+      out[city.id][sphere.id] = {
+        rumorRate: Number(rng.range(0.08, 0.42).toFixed(4)),
+        trustDecay: Number(rng.range(0.04, 0.24).toFixed(4)),
+        feedMix: Number(rng.range(0.42, 0.74).toFixed(4)),
+        localNarrativeBias: Number(rng.range(0.2, 0.52).toFixed(4))
+      };
+    }
+  }
+  return out;
+}
+
+function createDefaultCommunities(cities, rng) {
+  const templates = [
+    { id: "COM1", name: "Trade Guild Arc", type: "company" },
+    { id: "COM2", name: "River Covenant", type: "religion" },
+    { id: "COM3", name: "Neighborhood Assembly", type: "neighborhood" },
+    { id: "COM4", name: "Night Mechanics Club", type: "hobby" }
+  ];
+  return templates.map((t) => ({
+    ...t,
+    roleLayer: "Layer1",
+    cohesion: Number(rng.range(0.4, 0.78).toFixed(3)),
+    gatekeeping: Number(rng.range(0.22, 0.68).toFixed(3)),
+    normStrength: Number(rng.range(0.3, 0.75).toFixed(3)),
+    outgroupPenalty: Number(rng.range(0.2, 0.64).toFixed(3)),
+    roles: ["elder", "moderator", "storyteller", "gatekeeper"],
+    memberCityUids: (cities ?? [])
+      .slice(0, Math.min(8, cities.length))
+      .map((c) => c.id)
+  }));
+}
+
+function createDefaultInstitutions(cities) {
+  return [
+    {
+      id: "INST1",
+      name: "Civic Council",
+      type: "gov",
+      roleLayer: "Layer2",
+      jurisdiction: (cities ?? []).slice(0, Math.min(10, cities.length)).map((c) => c.id),
+      regulationStrength: 0.56,
+      enforcement: 0.58,
+      officialNarrativeBoost: 0.42,
+      crisisMode: false
+    },
+    {
+      id: "INST2",
+      name: "Protocol Authority",
+      type: "platform",
+      roleLayer: "Layer2",
+      jurisdiction: (cities ?? []).slice(Math.max(0, (cities?.length ?? 0) - 10)).map((c) => c.id),
+      regulationStrength: 0.62,
+      enforcement: 0.54,
+      officialNarrativeBoost: 0.5,
+      crisisMode: false
+    }
+  ];
 }

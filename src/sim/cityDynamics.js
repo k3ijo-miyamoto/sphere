@@ -1038,12 +1038,12 @@ function evolveCityNodes(world, frame, rng, config = {}) {
       280,
       Math.floor(parent.population * clamp(0.06 + candidate.organizationCapacity * 0.06, 0.06, 0.16))
     );
-    const city = {
-      id: `C${idx}`,
-      name: `${parent.name}-N${idx}`,
-      nationId: parent.nationId,
-      layerId: parent.layerId,
-      cityType: viability > 0.82 ? "mixed" : "residential",
+	    const city = {
+	      id: `C${idx}`,
+	      name: `${parent.name}-N${idx}`,
+	      nationId: parent.nationId,
+	      geoZoneId: parent.geoZoneId ?? "G2",
+	      cityType: viability > 0.82 ? "mixed" : "residential",
       geo: {
         lat: plan.geo.lat,
         lon: plan.geo.lon

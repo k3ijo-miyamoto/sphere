@@ -56,7 +56,12 @@ export function createPerson({
   generation,
   lineageRootId,
   genetics,
-  epigenetics
+  epigenetics,
+  sphereAffinities,
+  beliefVector,
+  attentionBudget,
+  influence,
+  trustGraph
 }) {
   const resolvedGenetics = genetics ?? createRandomGenetics(rng);
   const resolvedEpigenetics = epigenetics ?? createEmptyEpigenetics();
@@ -95,7 +100,9 @@ export function createPerson({
     age: age ?? Math.floor(rng.range(18, 65)),
     sex: sex ?? (rng.next() < 0.5 ? "F" : "M"),
     religion,
+    roleLayer: "Layer0",
     homeCityId,
+    homeCityUid: homeCityId,
     workCityId,
     currentCityId: homeCityId,
     currentState: "Home",
@@ -142,6 +149,20 @@ export function createPerson({
     social: {
       ties: {},
       updatedDay: -1
+    },
+    sphereAffinities: normalizeAffinities(sphereAffinities, rng),
+    beliefVector: {
+      orderOrientation: clamp01(beliefVector?.orderOrientation ?? rng.range(0.25, 0.75)),
+      antiEstablishment: clamp01(beliefVector?.antiEstablishment ?? rng.range(0.2, 0.75)),
+      conspiracyResistance: clamp01(beliefVector?.conspiracyResistance ?? rng.range(0.25, 0.78))
+    },
+    attentionBudget: clamp01(Number.isFinite(attentionBudget) ? attentionBudget : rng.range(0.45, 0.95)),
+    influence: clamp01(Number.isFinite(influence) ? influence : rng.range(0.02, 0.32)),
+    trustGraph: {
+      person: clamp01(trustGraph?.person ?? rng.range(0.35, 0.74)),
+      community: clamp01(trustGraph?.community ?? rng.range(0.3, 0.78)),
+      media: clamp01(trustGraph?.media ?? rng.range(0.25, 0.72)),
+      institution: clamp01(trustGraph?.institution ?? rng.range(0.28, 0.75))
     }
   };
 }
@@ -344,6 +365,29 @@ function pickOne(list, rng) {
   const idx = Math.floor(rng.range(0, list.length));
   const safeIdx = Math.min(list.length - 1, idx);
   return list[safeIdx] ?? `Citizen${idx}`;
+}
+
+function normalizeAffinities(raw, rng) {
+  const fallback = { S1: 0.5, S2: 0.3, S3: 0.2 };
+  const source = raw && typeof raw === "object" ? raw : fallback;
+  const keys = Object.keys(source);
+  if (!keys.length) {
+    return fallback;
+  }
+  let sum = 0;
+  const out = {};
+  for (const key of keys) {
+    const v = clamp01(Number.isFinite(source[key]) ? source[key] : rng.range(0.1, 0.8));
+    out[key] = v;
+    sum += v;
+  }
+  if (sum <= 0.0001) {
+    return fallback;
+  }
+  for (const key of Object.keys(out)) {
+    out[key] = Number((out[key] / sum).toFixed(6));
+  }
+  return out;
 }
 
 function clamp01(v) {

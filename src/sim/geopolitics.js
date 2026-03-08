@@ -509,10 +509,11 @@ function pickBlocForNation(nationId, blocIds) {
 }
 
 function pickBlocForCity(city, blocIds) {
+  const zoneId = city?.geoZoneId ?? city?.layerId;
   const byLayer =
-    city?.layerId === "L1" ? 0
-    : city?.layerId === "L2" ? 1
-    : city?.layerId === "L3" ? 2
+    zoneId === "G1" || zoneId === "L1" ? 0
+    : zoneId === "G2" || zoneId === "L2" ? 1
+    : zoneId === "G3" || zoneId === "L3" ? 2
     : stableHash(city?.id ?? "city");
   return blocIds[byLayer % blocIds.length];
 }

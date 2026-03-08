@@ -11,6 +11,112 @@ export const DEFAULT_CONFIG = {
     weekendNightlifeBoost: 1.35,
     weekendReligionBoost: 1.3
   },
+  spheres: {
+    enabled: true,
+    defaults: [
+      {
+        id: "S1",
+        name: "Open Sphere",
+        nestLevel: 0,
+        rankingPolicy: "neutral",
+        moderationStrength: 0.45,
+        shareFriction: 0.28,
+        botPressure: 0.14,
+        credibilityWeight: 0.56,
+        crossSphereFriction: 0.22
+      },
+      {
+        id: "S2",
+        name: "Amplifier Sphere",
+        nestLevel: 1,
+        rankingPolicy: "outrage_boost",
+        moderationStrength: 0.2,
+        shareFriction: 0.15,
+        botPressure: 0.38,
+        credibilityWeight: 0.34,
+        crossSphereFriction: 0.32
+      },
+      {
+        id: "S3",
+        name: "Curated Sphere",
+        nestLevel: 2,
+        rankingPolicy: "health_boost",
+        moderationStrength: 0.72,
+        shareFriction: 0.42,
+        botPressure: 0.08,
+        credibilityWeight: 0.74,
+        crossSphereFriction: 0.4
+      }
+    ],
+    eventRates: {
+      sphereSplitDaily: 0.06,
+      trustShockDaily: 0.08,
+      mobilizationDaily: 0.1
+    },
+    eventTtlTicks: {
+      sphereSplit: 72,
+      trustShock: 48,
+      mobilization: 56
+    }
+  },
+  communication: {
+    enabled: true,
+    baseInfoGenPerTick: 0.018,
+    maxActiveInfos: 180,
+    edgeAllowedBySphere: {
+      S1: {
+        Layer0: {
+          Layer0: { prob: 0.82, cost: 0.12, latency: 1 },
+          Layer1: { prob: 0.42, cost: 0.28, latency: 2 },
+          Layer2: { prob: 0.22, cost: 0.45, latency: 3 }
+        },
+        Layer1: {
+          Layer0: { prob: 0.66, cost: 0.18, latency: 1 },
+          Layer1: { prob: 0.58, cost: 0.2, latency: 2 },
+          Layer2: { prob: 0.32, cost: 0.34, latency: 2 }
+        },
+        Layer2: {
+          Layer0: { prob: 0.72, cost: 0.14, latency: 1 },
+          Layer1: { prob: 0.5, cost: 0.24, latency: 2 },
+          Layer2: { prob: 0.38, cost: 0.3, latency: 2 }
+        }
+      },
+      S2: {
+        Layer0: {
+          Layer0: { prob: 0.88, cost: 0.08, latency: 1 },
+          Layer1: { prob: 0.54, cost: 0.22, latency: 1 },
+          Layer2: { prob: 0.16, cost: 0.52, latency: 3 }
+        },
+        Layer1: {
+          Layer0: { prob: 0.72, cost: 0.14, latency: 1 },
+          Layer1: { prob: 0.62, cost: 0.18, latency: 1 },
+          Layer2: { prob: 0.24, cost: 0.42, latency: 3 }
+        },
+        Layer2: {
+          Layer0: { prob: 0.66, cost: 0.18, latency: 2 },
+          Layer1: { prob: 0.44, cost: 0.28, latency: 2 },
+          Layer2: { prob: 0.3, cost: 0.35, latency: 2 }
+        }
+      },
+      S3: {
+        Layer0: {
+          Layer0: { prob: 0.74, cost: 0.18, latency: 1 },
+          Layer1: { prob: 0.62, cost: 0.2, latency: 1 },
+          Layer2: { prob: 0.42, cost: 0.3, latency: 2 }
+        },
+        Layer1: {
+          Layer0: { prob: 0.68, cost: 0.16, latency: 1 },
+          Layer1: { prob: 0.7, cost: 0.14, latency: 1 },
+          Layer2: { prob: 0.48, cost: 0.24, latency: 2 }
+        },
+        Layer2: {
+          Layer0: { prob: 0.76, cost: 0.14, latency: 1 },
+          Layer1: { prob: 0.58, cost: 0.18, latency: 1 },
+          Layer2: { prob: 0.52, cost: 0.2, latency: 1 }
+        }
+      }
+    }
+  },
   migration: {
     nightlyRelocationBaseRate: 0.01,
     religionCompatibilityWeight: 0.12,
@@ -41,7 +147,16 @@ export const DEFAULT_CONFIG = {
     },
     baseHireShareFloor: 0.08,
     baseHirePolicyCoupling: 0.12,
-    baseHireStabilityCoupling: 0.08
+    baseHireStabilityCoupling: 0.08,
+    unemploymentResponseThreshold: 18,
+    unemploymentResponseScale: 0.3,
+    policyActionEmploymentBoost: {
+      balanced_focus: 0.4,
+      security_focus: 0.1,
+      justice_focus: 0.2,
+      welfare_focus: 0.85,
+      growth_focus: 1
+    }
   },
   currency: {
     enabled: true,
