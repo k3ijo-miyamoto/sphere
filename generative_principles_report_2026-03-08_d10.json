@@ -1,0 +1,2350 @@
+{
+  "meta": {
+    "days": 10,
+    "seed": 1337,
+    "targetCityId": "C1",
+    "trackedIndividuals": null,
+    "evalProfile": "stability-first",
+    "generatedAt": "2026-03-08T04:42:23.852Z"
+  },
+  "tests": {
+    "testA": {
+      "name": "A",
+      "principle": "Individuals ↔ Institutions ↔ Environment",
+      "pass": false,
+      "checks": {
+        "behaviorChanged": true,
+        "cityChanged": true,
+        "policyAdapted": true
+      },
+      "adaptiveAssessment": {
+        "evalProfile": "stability-first",
+        "response": true,
+        "effectiveness": false,
+        "sustainability": false,
+        "class": "Adaptive but Ineffective",
+        "effectivenessScore": -7.591486,
+        "sustainScore": -7.612973,
+        "policyMoveSignals": {
+          "revisionCountUp": false,
+          "revisionRateUp": false,
+          "educationUpdatesUp": false,
+          "mutationDelta": true,
+          "policyActionChanged": false,
+          "educationPolicyActionChanged": false
+        },
+        "lateDelta": {
+          "avgSafety": 0.605032,
+          "avgTrust": -0.020421,
+          "avgInstability": -0.097896,
+          "avgUnemployment": 18.364583,
+          "avgUnemploymentTargetCity": 20.072917,
+          "avgIncome": 0.100229
+        },
+        "unemploymentDeltaDiagnostics": {
+          "deltaUnemployment": 13.041042,
+          "driverDelta": {
+            "avgOpenPositionsPerPerson": 0.036307,
+            "avgEmploymentCapacity": 0.017877,
+            "avgStrain": -0.018462,
+            "avgHiringRecoveryMult": 0.003461,
+            "avgMacroShock": -0.014464,
+            "avgBaseHireShare": 0.070469,
+            "avgBaseHireShareEffective": 0.076113,
+            "p95BaseHireShareEffective": -0.007041,
+            "avgShockPenalty": -0.000822,
+            "avgStrainPenalty": -0.001557,
+            "avgPolicySupport": 0,
+            "avgCapacityRatio": 0.072942,
+            "avgHireChance": 0.041621
+          },
+          "weightedContributions": [
+            {
+              "key": "targetCityUnemployment",
+              "value": 26.272094
+            },
+            {
+              "key": "baseHireShare",
+              "value": -0.077516
+            },
+            {
+              "key": "capacityRatio",
+              "value": -0.069295
+            },
+            {
+              "key": "macroShock",
+              "value": -0.010125
+            },
+            {
+              "key": "hiringRecoveryMult",
+              "value": -0.003634
+            },
+            {
+              "key": "strainPenalty",
+              "value": -0.001868
+            },
+            {
+              "key": "shockPenalty",
+              "value": -0.001027
+            },
+            {
+              "key": "policySupport",
+              "value": 0
+            }
+          ],
+          "topContributor": {
+            "key": "targetCityUnemployment",
+            "value": 26.272094
+          }
+        },
+        "byProfile": {
+          "stability-first": {
+            "effectiveness": false,
+            "sustainability": false,
+            "class": "Adaptive but Ineffective",
+            "effectivenessScore": -7.591486,
+            "sustainScore": -7.612973
+          },
+          "employment-first": {
+            "effectiveness": false,
+            "sustainability": false,
+            "class": "Adaptive but Ineffective",
+            "effectivenessScore": -27.564521,
+            "sustainScore": -26.484621
+          }
+        }
+      },
+      "baseline": {
+        "name": "A_baseline",
+        "ticks": 480,
+        "population": 871,
+        "behavior": {
+          "relocationRatePerTick": 0.021261481056257175,
+          "marriageRatePerTick": 0.0005166475315729047,
+          "birthRatePerTick": 0.000014351320321469575,
+          "avgUnemployment": 29.24229166666668,
+          "avgUnemploymentTargetCity": 25.205416666666512,
+          "avgIncome": 0.679977083333333
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.3542144396147615,
+          "safety": 0.04891457775574958,
+          "trust": 0.9751356961159235,
+          "instabilityRisk": 0.9465091132202236,
+          "inequality": 0.9164236896528443
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 30,
+          "policyRevisionCount": 650,
+          "policyRevisionRate": 65,
+          "cityPolicyAction": "balanced_focus",
+          "cityPolicyMutationCount": 3,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.69
+        },
+        "geopolitics": {
+          "avgTension": 0.9259491666666722,
+          "maxAvgTension": 0.99,
+          "maxWarPairs": 7,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 4,
+          "maxInternationalEdgesCount": 29,
+          "restrictionAppliedCount": 6506,
+          "maxRestrictionAppliedCount": 29,
+          "maxBorderRestrictedEdges": 48,
+          "finalStatuses": {
+            "war": 7,
+            "crisis": 3
+          },
+          "borderRestrictedEdges": 36
+        },
+        "social": {
+          "avgInstability": 0.5838708333333337,
+          "avgSafety": 0.49963371773562765,
+          "avgAge": 40.82628690058726,
+          "avgOpenness": 0.34789948961279965,
+          "avgFamilyOriented": 0.35891624719465015,
+          "religiousDiversity": -323.16140862986606,
+          "wealthGini": 0.33114423328501563
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.03769366387246861,
+          "avgEmploymentCapacity": 0.28415222694132447,
+          "avgStrain": 0.8587003335706337,
+          "avgHiringRecoveryMult": 0.7941542208333332,
+          "avgMacroShock": 0.11551271972033174,
+          "avgBaseHireShare": 0.5717947562499991,
+          "avgBaseHireShareEffective": 0.5193419562500002,
+          "p95BaseHireShareEffective": 0.8593972458333312,
+          "avgShockPenalty": 0.005618193750000011,
+          "avgStrainPenalty": 0.1266127833333325,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.5737724229166659,
+          "avgHireChance": 0.38675168333333315
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.0792,
+            "stressed": 0.0375,
+            "fractured": 0.8833,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.2125,
+            "stressed": 0.0313,
+            "fractured": 0.7562,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.2104,
+            "stressed": 0.0313,
+            "fractured": 0.7583,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.0771,
+            "stressed": 0.0417,
+            "fractured": 0.8812,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.0646,
+            "stressed": 0.0333,
+            "fractured": 0.9021,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1729,
+            "stressed": 0.0271,
+            "fractured": 0.8,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.2313,
+            "stressed": 0.0313,
+            "fractured": 0.7375,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1417,
+            "stressed": 0.025,
+            "fractured": 0.8333,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1625,
+            "stressed": 0.0292,
+            "fractured": 0.8083,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.0646,
+            "stressed": 0.0417,
+            "fractured": 0.8938,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.0854,
+            "stressed": 0.0396,
+            "fractured": 0.875,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1875,
+            "stressed": 0.0292,
+            "fractured": 0.7833,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.2208,
+            "stressed": 0.0313,
+            "fractured": 0.7479,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.0708,
+            "stressed": 0.0396,
+            "fractured": 0.8896,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.0479,
+            "stressed": 0.0271,
+            "fractured": 0.925,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.0646,
+            "stressed": 0.0396,
+            "fractured": 0.8958,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0271,
+            "stressed": 0.0229,
+            "fractured": 0.95,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.2188,
+            "stressed": 0.0313,
+            "fractured": 0.75,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.2104,
+            "stressed": 0.0292,
+            "fractured": 0.7604,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.1979,
+            "stressed": 0.0271,
+            "fractured": 0.775,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1958,
+            "stressed": 0.0271,
+            "fractured": 0.7771,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.0875,
+            "stressed": 0.0354,
+            "fractured": 0.8771,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.15,
+            "stressed": 0.0292,
+            "fractured": 0.8208,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.0583,
+            "stressed": 0.1104,
+            "fractured": 0.8313,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.3312,
+            "stressed": 0.0396,
+            "fractured": 0.6292,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.023,
+            "stressed": 0.0256,
+            "fractured": 0.9514,
+            "samples": 391
+          },
+          "C27": {
+            "normal": 0.0345,
+            "stressed": 0.0265,
+            "fractured": 0.939,
+            "samples": 377
+          },
+          "C28": {
+            "normal": 0.0386,
+            "stressed": 0.0275,
+            "fractured": 0.9339,
+            "samples": 363
+          },
+          "C29": {
+            "normal": 0.0344,
+            "stressed": 0.0315,
+            "fractured": 0.9341,
+            "samples": 349
+          },
+          "C30": {
+            "normal": 0.0523,
+            "stressed": 0.04,
+            "fractured": 0.9077,
+            "samples": 325
+          },
+          "C31": {
+            "normal": 0.0386,
+            "stressed": 0.0289,
+            "fractured": 0.9325,
+            "samples": 311
+          },
+          "C32": {
+            "normal": 0.037,
+            "stressed": 0.0269,
+            "fractured": 0.936,
+            "samples": 297
+          },
+          "C33": {
+            "normal": 0.0565,
+            "stressed": 0.0389,
+            "fractured": 0.9046,
+            "samples": 283
+          },
+          "C34": {
+            "normal": 0.0372,
+            "stressed": 0.0297,
+            "fractured": 0.9331,
+            "samples": 269
+          },
+          "C35": {
+            "normal": 0.0353,
+            "stressed": 0.0275,
+            "fractured": 0.9373,
+            "samples": 255
+          },
+          "C36": {
+            "normal": 0.0539,
+            "stressed": 0.0373,
+            "fractured": 0.9087,
+            "samples": 241
+          },
+          "C37": {
+            "normal": 0.036,
+            "stressed": 0.0315,
+            "fractured": 0.9324,
+            "samples": 222
+          },
+          "C38": {
+            "normal": 0.0385,
+            "stressed": 0.0337,
+            "fractured": 0.9279,
+            "samples": 208
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.34972487297256305,
+          "avgTrust": 0.8511375504842453,
+          "avgInstability": 0.7055625,
+          "avgUnemployment": 30.643749999999986,
+          "avgUnemploymentTargetCity": 31.300000000000036,
+          "avgIncome": 0.7521458333333336
+        },
+        "events": {
+          "riotRisk": 2701,
+          "war": 7,
+          "crisis": 1,
+          "sanction": 494
+        }
+      },
+      "intervention": {
+        "name": "A_intervention",
+        "ticks": 480,
+        "population": 888,
+        "behavior": {
+          "relocationRatePerTick": 0.0547461524024024,
+          "marriageRatePerTick": 0.0005583708708708708,
+          "birthRatePerTick": 0.00002346096096096096,
+          "avgUnemployment": 42.283333333333275,
+          "avgUnemploymentTargetCity": 50.2264583333334,
+          "avgIncome": 0.7532791666666668
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.805314556993264,
+          "safety": 0.979413585853791,
+          "trust": 0.5722903597311739,
+          "instabilityRisk": 0.6136108050936575,
+          "inequality": 0.99243392
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 23,
+          "policyRevisionCount": 618,
+          "policyRevisionRate": 61.8,
+          "cityPolicyAction": "balanced_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.9126
+        },
+        "geopolitics": {
+          "avgTension": 0.8945361111111161,
+          "maxAvgTension": 0.9900000000000001,
+          "maxWarPairs": 5,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 11,
+          "maxInternationalEdgesCount": 32,
+          "restrictionAppliedCount": 10615,
+          "maxRestrictionAppliedCount": 32,
+          "maxBorderRestrictedEdges": 32,
+          "finalStatuses": {
+            "war": 5,
+            "crisis": 5
+          },
+          "borderRestrictedEdges": 12
+        },
+        "social": {
+          "avgInstability": 0.42644791666666726,
+          "avgSafety": 0.9637633080406033,
+          "avgAge": 41.0223158089603,
+          "avgOpenness": 0.4219154245020392,
+          "avgFamilyOriented": 0.43583657135435705,
+          "religiousDiversity": -323.51854083918096,
+          "wealthGini": 0.29983773244393763
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.0740008195611852,
+          "avgEmploymentCapacity": 0.30202939793575617,
+          "avgStrain": 0.8402381024427305,
+          "avgHiringRecoveryMult": 0.7976156750000001,
+          "avgMacroShock": 0.10104896044922379,
+          "avgBaseHireShare": 0.642264189583332,
+          "avgBaseHireShareEffective": 0.5954552874999987,
+          "p95BaseHireShareEffective": 0.8523563687499988,
+          "avgShockPenalty": 0.004796581250000015,
+          "avgStrainPenalty": 0.1250555958333325,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.646714660416666,
+          "avgHireChance": 0.42837275208333453
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.1313,
+            "stressed": 0.0167,
+            "fractured": 0.8521,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.2208,
+            "stressed": 0.0271,
+            "fractured": 0.7521,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.2146,
+            "stressed": 0.0229,
+            "fractured": 0.7625,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.1563,
+            "stressed": 0.0313,
+            "fractured": 0.8125,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.1187,
+            "stressed": 0.0313,
+            "fractured": 0.85,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1833,
+            "stressed": 0.0292,
+            "fractured": 0.7875,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.2396,
+            "stressed": 0.0333,
+            "fractured": 0.7271,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1333,
+            "stressed": 0.025,
+            "fractured": 0.8417,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1354,
+            "stressed": 0.025,
+            "fractured": 0.8396,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.1375,
+            "stressed": 0.0375,
+            "fractured": 0.825,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.1458,
+            "stressed": 0.025,
+            "fractured": 0.8292,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1542,
+            "stressed": 0.025,
+            "fractured": 0.8208,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.2417,
+            "stressed": 0.0271,
+            "fractured": 0.7312,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.1021,
+            "stressed": 0.0292,
+            "fractured": 0.8688,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.1333,
+            "stressed": 0.0333,
+            "fractured": 0.8333,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.1,
+            "stressed": 0.0313,
+            "fractured": 0.8688,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0354,
+            "stressed": 0.0375,
+            "fractured": 0.9271,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.1938,
+            "stressed": 0.0208,
+            "fractured": 0.7854,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.1979,
+            "stressed": 0.0208,
+            "fractured": 0.7813,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.2396,
+            "stressed": 0.0229,
+            "fractured": 0.7375,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1917,
+            "stressed": 0.0229,
+            "fractured": 0.7854,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.1021,
+            "stressed": 0.0437,
+            "fractured": 0.8542,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.1292,
+            "stressed": 0.0229,
+            "fractured": 0.8479,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.2542,
+            "stressed": 0.0271,
+            "fractured": 0.7188,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.1792,
+            "stressed": 0.0271,
+            "fractured": 0.7937,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.0599,
+            "stressed": 0.0347,
+            "fractured": 0.9054,
+            "samples": 317
+          },
+          "C27": {
+            "normal": 0.0528,
+            "stressed": 0.0297,
+            "fractured": 0.9175,
+            "samples": 303
+          },
+          "C28": {
+            "normal": 0.0458,
+            "stressed": 0.0282,
+            "fractured": 0.9261,
+            "samples": 284
+          },
+          "C29": {
+            "normal": 0.0593,
+            "stressed": 0.0333,
+            "fractured": 0.9074,
+            "samples": 270
+          },
+          "C30": {
+            "normal": 0.0469,
+            "stressed": 0.0313,
+            "fractured": 0.9219,
+            "samples": 256
+          },
+          "C31": {
+            "normal": 0.0549,
+            "stressed": 0.0338,
+            "fractured": 0.9114,
+            "samples": 237
+          },
+          "C32": {
+            "normal": 0.0717,
+            "stressed": 0.0404,
+            "fractured": 0.8879,
+            "samples": 223
+          },
+          "C33": {
+            "normal": 0.0574,
+            "stressed": 0.0383,
+            "fractured": 0.9043,
+            "samples": 209
+          },
+          "C34": {
+            "normal": 0.0632,
+            "stressed": 0.0474,
+            "fractured": 0.8895,
+            "samples": 190
+          },
+          "C35": {
+            "normal": 0.0936,
+            "stressed": 0.0585,
+            "fractured": 0.848,
+            "samples": 171
+          },
+          "C36": {
+            "normal": 0.0764,
+            "stressed": 0.051,
+            "fractured": 0.8726,
+            "samples": 157
+          },
+          "C37": {
+            "normal": 0.0839,
+            "stressed": 0.0559,
+            "fractured": 0.8601,
+            "samples": 143
+          },
+          "C38": {
+            "normal": 0.1163,
+            "stressed": 0.0775,
+            "fractured": 0.8062,
+            "samples": 129
+          },
+          "C39": {
+            "normal": 0.113,
+            "stressed": 0.0696,
+            "fractured": 0.8174,
+            "samples": 115
+          },
+          "C40": {
+            "normal": 0.099,
+            "stressed": 0.0594,
+            "fractured": 0.8416,
+            "samples": 101
+          },
+          "C41": {
+            "normal": 0.1609,
+            "stressed": 0.1149,
+            "fractured": 0.7241,
+            "samples": 87
+          },
+          "C42": {
+            "normal": 0.2192,
+            "stressed": 0.1233,
+            "fractured": 0.6575,
+            "samples": 73
+          },
+          "C43": {
+            "normal": 0.22,
+            "stressed": 0.14,
+            "fractured": 0.64,
+            "samples": 50
+          },
+          "C44": {
+            "normal": 0.4722,
+            "stressed": 0.2778,
+            "fractured": 0.25,
+            "samples": 36
+          },
+          "C45": {
+            "normal": 0.6818,
+            "stressed": 0.3182,
+            "fractured": 0,
+            "samples": 22
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.9547573269832988,
+          "avgTrust": 0.8307170176413216,
+          "avgInstability": 0.6076666666666664,
+          "avgUnemployment": 49.008333333333354,
+          "avgUnemploymentTargetCity": 51.37291666666669,
+          "avgIncome": 0.8523750000000007
+        },
+        "events": {
+          "riotRisk": 115,
+          "war": 5,
+          "crisis": 1,
+          "sanction": 540
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": 0.033485,
+          "marriageRatePerTick": 0.000042,
+          "birthRatePerTick": 0.000009,
+          "avgUnemployment": 13.041042,
+          "avgUnemploymentTargetCity": 25.021042,
+          "avgIncome": 0.073302
+        },
+        "city": {
+          "productivity": 0.4511,
+          "safety": 0.930499,
+          "trust": -0.402845,
+          "instabilityRisk": -0.332898,
+          "inequality": 0.07601
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -7,
+          "policyRevisionCount": -32,
+          "policyRevisionRate": -3.2,
+          "cityPolicyMutationCount": -1,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": -0.031413,
+          "maxAvgTension": 0,
+          "maxWarPairs": -2,
+          "maxCrisisPairs": 0,
+          "internationalEdgesCount": 7,
+          "maxInternationalEdgesCount": 3,
+          "restrictionAppliedCount": 4109,
+          "maxRestrictionAppliedCount": 3,
+          "maxBorderRestrictedEdges": -16,
+          "borderRestrictedEdges": -24
+        },
+        "social": {
+          "avgInstability": -0.157423,
+          "avgSafety": 0.46413,
+          "avgAge": 0.196029,
+          "religiousDiversity": -0.357132,
+          "wealthGini": -0.031307
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.036307,
+          "avgEmploymentCapacity": 0.017877,
+          "avgStrain": -0.018462,
+          "avgHiringRecoveryMult": 0.003461,
+          "avgMacroShock": -0.014464,
+          "avgBaseHireShare": 0.070469,
+          "avgBaseHireShareEffective": 0.076113,
+          "p95BaseHireShareEffective": -0.007041,
+          "avgShockPenalty": -0.000822,
+          "avgStrainPenalty": -0.001557,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.072942,
+          "avgHireChance": 0.041621
+        }
+      }
+    },
+    "testB": {
+      "name": "B",
+      "principle": "Multi-scale coevolution",
+      "pass": true,
+      "checks": {
+        "economyShock": true,
+        "migrationShift": true,
+        "cityDestabilize": true,
+        "geopoliticalSpill": true,
+        "feedbackToCities": true
+      },
+      "strictChecks": {
+        "economyShock": true,
+        "migrationShift": false,
+        "cityDestabilize": true,
+        "geopoliticalSpill": true,
+        "feedbackToCities": false
+      },
+      "strictScore": 3,
+      "activationScore": 5,
+      "mode": "dual",
+      "score": 5,
+      "baseline": {
+        "name": "B_baseline",
+        "ticks": 480,
+        "population": 871,
+        "behavior": {
+          "relocationRatePerTick": 0.021261481056257175,
+          "marriageRatePerTick": 0.0005166475315729047,
+          "birthRatePerTick": 0.000014351320321469575,
+          "avgUnemployment": 29.24229166666668,
+          "avgUnemploymentTargetCity": 25.205416666666512,
+          "avgIncome": 0.679977083333333
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.3542144396147615,
+          "safety": 0.04891457775574958,
+          "trust": 0.9751356961159235,
+          "instabilityRisk": 0.9465091132202236,
+          "inequality": 0.9164236896528443
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 30,
+          "policyRevisionCount": 650,
+          "policyRevisionRate": 65,
+          "cityPolicyAction": "balanced_focus",
+          "cityPolicyMutationCount": 3,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.69
+        },
+        "geopolitics": {
+          "avgTension": 0.9259491666666722,
+          "maxAvgTension": 0.99,
+          "maxWarPairs": 7,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 4,
+          "maxInternationalEdgesCount": 29,
+          "restrictionAppliedCount": 6506,
+          "maxRestrictionAppliedCount": 29,
+          "maxBorderRestrictedEdges": 48,
+          "finalStatuses": {
+            "war": 7,
+            "crisis": 3
+          },
+          "borderRestrictedEdges": 36
+        },
+        "social": {
+          "avgInstability": 0.5838708333333337,
+          "avgSafety": 0.49963371773562765,
+          "avgAge": 40.82628690058726,
+          "avgOpenness": 0.34789948961279965,
+          "avgFamilyOriented": 0.35891624719465015,
+          "religiousDiversity": -323.16140862986606,
+          "wealthGini": 0.33114423328501563
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.03769366387246861,
+          "avgEmploymentCapacity": 0.28415222694132447,
+          "avgStrain": 0.8587003335706337,
+          "avgHiringRecoveryMult": 0.7941542208333332,
+          "avgMacroShock": 0.11551271972033174,
+          "avgBaseHireShare": 0.5717947562499991,
+          "avgBaseHireShareEffective": 0.5193419562500002,
+          "p95BaseHireShareEffective": 0.8593972458333312,
+          "avgShockPenalty": 0.005618193750000011,
+          "avgStrainPenalty": 0.1266127833333325,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.5737724229166659,
+          "avgHireChance": 0.38675168333333315
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.0792,
+            "stressed": 0.0375,
+            "fractured": 0.8833,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.2125,
+            "stressed": 0.0313,
+            "fractured": 0.7562,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.2104,
+            "stressed": 0.0313,
+            "fractured": 0.7583,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.0771,
+            "stressed": 0.0417,
+            "fractured": 0.8812,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.0646,
+            "stressed": 0.0333,
+            "fractured": 0.9021,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1729,
+            "stressed": 0.0271,
+            "fractured": 0.8,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.2313,
+            "stressed": 0.0313,
+            "fractured": 0.7375,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1417,
+            "stressed": 0.025,
+            "fractured": 0.8333,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1625,
+            "stressed": 0.0292,
+            "fractured": 0.8083,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.0646,
+            "stressed": 0.0417,
+            "fractured": 0.8938,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.0854,
+            "stressed": 0.0396,
+            "fractured": 0.875,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1875,
+            "stressed": 0.0292,
+            "fractured": 0.7833,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.2208,
+            "stressed": 0.0313,
+            "fractured": 0.7479,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.0708,
+            "stressed": 0.0396,
+            "fractured": 0.8896,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.0479,
+            "stressed": 0.0271,
+            "fractured": 0.925,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.0646,
+            "stressed": 0.0396,
+            "fractured": 0.8958,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0271,
+            "stressed": 0.0229,
+            "fractured": 0.95,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.2188,
+            "stressed": 0.0313,
+            "fractured": 0.75,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.2104,
+            "stressed": 0.0292,
+            "fractured": 0.7604,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.1979,
+            "stressed": 0.0271,
+            "fractured": 0.775,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1958,
+            "stressed": 0.0271,
+            "fractured": 0.7771,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.0875,
+            "stressed": 0.0354,
+            "fractured": 0.8771,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.15,
+            "stressed": 0.0292,
+            "fractured": 0.8208,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.0583,
+            "stressed": 0.1104,
+            "fractured": 0.8313,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.3312,
+            "stressed": 0.0396,
+            "fractured": 0.6292,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.023,
+            "stressed": 0.0256,
+            "fractured": 0.9514,
+            "samples": 391
+          },
+          "C27": {
+            "normal": 0.0345,
+            "stressed": 0.0265,
+            "fractured": 0.939,
+            "samples": 377
+          },
+          "C28": {
+            "normal": 0.0386,
+            "stressed": 0.0275,
+            "fractured": 0.9339,
+            "samples": 363
+          },
+          "C29": {
+            "normal": 0.0344,
+            "stressed": 0.0315,
+            "fractured": 0.9341,
+            "samples": 349
+          },
+          "C30": {
+            "normal": 0.0523,
+            "stressed": 0.04,
+            "fractured": 0.9077,
+            "samples": 325
+          },
+          "C31": {
+            "normal": 0.0386,
+            "stressed": 0.0289,
+            "fractured": 0.9325,
+            "samples": 311
+          },
+          "C32": {
+            "normal": 0.037,
+            "stressed": 0.0269,
+            "fractured": 0.936,
+            "samples": 297
+          },
+          "C33": {
+            "normal": 0.0565,
+            "stressed": 0.0389,
+            "fractured": 0.9046,
+            "samples": 283
+          },
+          "C34": {
+            "normal": 0.0372,
+            "stressed": 0.0297,
+            "fractured": 0.9331,
+            "samples": 269
+          },
+          "C35": {
+            "normal": 0.0353,
+            "stressed": 0.0275,
+            "fractured": 0.9373,
+            "samples": 255
+          },
+          "C36": {
+            "normal": 0.0539,
+            "stressed": 0.0373,
+            "fractured": 0.9087,
+            "samples": 241
+          },
+          "C37": {
+            "normal": 0.036,
+            "stressed": 0.0315,
+            "fractured": 0.9324,
+            "samples": 222
+          },
+          "C38": {
+            "normal": 0.0385,
+            "stressed": 0.0337,
+            "fractured": 0.9279,
+            "samples": 208
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.34972487297256305,
+          "avgTrust": 0.8511375504842453,
+          "avgInstability": 0.7055625,
+          "avgUnemployment": 30.643749999999986,
+          "avgUnemploymentTargetCity": 31.300000000000036,
+          "avgIncome": 0.7521458333333336
+        },
+        "events": {
+          "riotRisk": 2701,
+          "war": 7,
+          "crisis": 1,
+          "sanction": 494
+        }
+      },
+      "intervention": {
+        "name": "B_shock",
+        "ticks": 480,
+        "population": 855,
+        "behavior": {
+          "relocationRatePerTick": 0.008613547758284601,
+          "marriageRatePerTick": 0.000594541910331384,
+          "birthRatePerTick": 0.00001949317738791423,
+          "avgUnemployment": 40.7004166666667,
+          "avgUnemploymentTargetCity": 35.937291666666546,
+          "avgIncome": 0.5174833333333339
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 0.8046197936907217,
+          "safety": 0.047824347684081156,
+          "trust": 0.05,
+          "instabilityRisk": 1.0071316474626861,
+          "inequality": 0.9952447999999999
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 20,
+          "policyRevisionCount": 614,
+          "policyRevisionRate": 61.4,
+          "cityPolicyAction": "welfare_focus",
+          "cityPolicyMutationCount": 2,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.4018
+        },
+        "geopolitics": {
+          "avgTension": 0.915721666666672,
+          "maxAvgTension": 0.9900000000000001,
+          "maxWarPairs": 9,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 4,
+          "maxInternationalEdgesCount": 28,
+          "restrictionAppliedCount": 5147,
+          "maxRestrictionAppliedCount": 26,
+          "maxBorderRestrictedEdges": 39,
+          "finalStatuses": {
+            "war": 9,
+            "crisis": 1
+          },
+          "borderRestrictedEdges": 30
+        },
+        "social": {
+          "avgInstability": 0.7617770833333339,
+          "avgSafety": 0.28314297172812813,
+          "avgAge": 40.52231354642377,
+          "avgOpenness": 0.28279208771547926,
+          "avgFamilyOriented": 0.2999071826111659,
+          "religiousDiversity": -323.4910161280018,
+          "wealthGini": 0.3867941014115084
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.03982002650632272,
+          "avgEmploymentCapacity": 0.25491890188117494,
+          "avgStrain": 0.8954655988280398,
+          "avgHiringRecoveryMult": 0.7889038083333334,
+          "avgMacroShock": 0.25569452281370614,
+          "avgBaseHireShare": 0.6892612749999975,
+          "avgBaseHireShareEffective": 0.5836946187500016,
+          "p95BaseHireShareEffective": 0.8155328729166675,
+          "avgShockPenalty": 0.026556502083333145,
+          "avgStrainPenalty": 0.13005091874999916,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.6914265833333307,
+          "avgHireChance": 0.3924193458333331
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.0625,
+            "stressed": 0.0354,
+            "fractured": 0.9021,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.1958,
+            "stressed": 0.025,
+            "fractured": 0.7792,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.1729,
+            "stressed": 0.0229,
+            "fractured": 0.8042,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.0563,
+            "stressed": 0.0313,
+            "fractured": 0.9125,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.0542,
+            "stressed": 0.0292,
+            "fractured": 0.9167,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1271,
+            "stressed": 0.0229,
+            "fractured": 0.85,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.2083,
+            "stressed": 0.0229,
+            "fractured": 0.7688,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1125,
+            "stressed": 0.0271,
+            "fractured": 0.8604,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1125,
+            "stressed": 0.0292,
+            "fractured": 0.8583,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.0604,
+            "stressed": 0.0354,
+            "fractured": 0.9042,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.0688,
+            "stressed": 0.0229,
+            "fractured": 0.9083,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1458,
+            "stressed": 0.025,
+            "fractured": 0.8292,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.1812,
+            "stressed": 0.0208,
+            "fractured": 0.7979,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.0521,
+            "stressed": 0.0292,
+            "fractured": 0.9187,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.0437,
+            "stressed": 0.0229,
+            "fractured": 0.9333,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.05,
+            "stressed": 0.0333,
+            "fractured": 0.9167,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0271,
+            "stressed": 0.0229,
+            "fractured": 0.95,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.1042,
+            "stressed": 0.0271,
+            "fractured": 0.8688,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.1354,
+            "stressed": 0.0313,
+            "fractured": 0.8333,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.1729,
+            "stressed": 0.0229,
+            "fractured": 0.8042,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1521,
+            "stressed": 0.025,
+            "fractured": 0.8229,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.0688,
+            "stressed": 0.0229,
+            "fractured": 0.9083,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.0938,
+            "stressed": 0.0271,
+            "fractured": 0.8792,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.1708,
+            "stressed": 0.0208,
+            "fractured": 0.8083,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.1,
+            "stressed": 0.0187,
+            "fractured": 0.8812,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.0286,
+            "stressed": 0.0208,
+            "fractured": 0.9505,
+            "samples": 384
+          },
+          "C27": {
+            "normal": 0.0358,
+            "stressed": 0.0248,
+            "fractured": 0.9394,
+            "samples": 363
+          },
+          "C28": {
+            "normal": 0.0258,
+            "stressed": 0.0315,
+            "fractured": 0.9427,
+            "samples": 349
+          },
+          "C29": {
+            "normal": 0.0469,
+            "stressed": 0.0375,
+            "fractured": 0.9156,
+            "samples": 320
+          },
+          "C30": {
+            "normal": 0.0332,
+            "stressed": 0.0266,
+            "fractured": 0.9402,
+            "samples": 301
+          },
+          "C31": {
+            "normal": 0.0348,
+            "stressed": 0.0244,
+            "fractured": 0.9408,
+            "samples": 287
+          },
+          "C32": {
+            "normal": 0.0476,
+            "stressed": 0.0366,
+            "fractured": 0.9158,
+            "samples": 273
+          },
+          "C33": {
+            "normal": 0.0386,
+            "stressed": 0.027,
+            "fractured": 0.9344,
+            "samples": 259
+          },
+          "C34": {
+            "normal": 0.0286,
+            "stressed": 0.0245,
+            "fractured": 0.9469,
+            "samples": 245
+          },
+          "C35": {
+            "normal": 0.0303,
+            "stressed": 0.026,
+            "fractured": 0.9437,
+            "samples": 231
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.07409452524292925,
+          "avgTrust": 0.12780848212391596,
+          "avgInstability": 0.9681666666666665,
+          "avgUnemployment": 43.74791666666663,
+          "avgUnemploymentTargetCity": 42.90000000000006,
+          "avgIncome": 0.5974583333333331
+        },
+        "events": {
+          "riotRisk": 3447,
+          "war": 9,
+          "crisis": 6,
+          "sanction": 218
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": -0.012648,
+          "marriageRatePerTick": 0.000078,
+          "birthRatePerTick": 0.000005,
+          "avgUnemployment": 11.458125,
+          "avgUnemploymentTargetCity": 10.731875,
+          "avgIncome": -0.162494
+        },
+        "city": {
+          "productivity": -0.549595,
+          "safety": -0.00109,
+          "trust": -0.925136,
+          "instabilityRisk": 0.060623,
+          "inequality": 0.078821
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -10,
+          "policyRevisionCount": -36,
+          "policyRevisionRate": -3.6,
+          "cityPolicyMutationCount": -1,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": -0.010228,
+          "maxAvgTension": 0,
+          "maxWarPairs": 2,
+          "maxCrisisPairs": 0,
+          "internationalEdgesCount": 0,
+          "maxInternationalEdgesCount": -1,
+          "restrictionAppliedCount": -1359,
+          "maxRestrictionAppliedCount": -3,
+          "maxBorderRestrictedEdges": -9,
+          "borderRestrictedEdges": -6
+        },
+        "social": {
+          "avgInstability": 0.177906,
+          "avgSafety": -0.216491,
+          "avgAge": -0.303973,
+          "religiousDiversity": -0.329607,
+          "wealthGini": 0.05565
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.002126,
+          "avgEmploymentCapacity": -0.029233,
+          "avgStrain": 0.036765,
+          "avgHiringRecoveryMult": -0.00525,
+          "avgMacroShock": 0.140182,
+          "avgBaseHireShare": 0.117467,
+          "avgBaseHireShareEffective": 0.064353,
+          "p95BaseHireShareEffective": -0.043864,
+          "avgShockPenalty": 0.020938,
+          "avgStrainPenalty": 0.003438,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.117654,
+          "avgHireChance": 0.005668
+        }
+      }
+    },
+    "testC": {
+      "name": "C",
+      "principle": "Trait distribution pushes institutions",
+      "pass": true,
+      "checks": {
+        "socioChange": true,
+        "structureChange": true,
+        "institutionPushback": true
+      },
+      "strictChecks": {
+        "socioChange": true,
+        "structureChange": true,
+        "institutionPushback": true
+      },
+      "activationChecks": {
+        "socioChange": true,
+        "structureChange": true,
+        "institutionPushback": true
+      },
+      "baseline": {
+        "name": "C_baseline",
+        "ticks": 480,
+        "population": 871,
+        "behavior": {
+          "relocationRatePerTick": 0.021261481056257175,
+          "marriageRatePerTick": 0.0005166475315729047,
+          "birthRatePerTick": 0.000014351320321469575,
+          "avgUnemployment": 29.24229166666668,
+          "avgUnemploymentTargetCity": 25.205416666666512,
+          "avgIncome": 0.679977083333333
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.3542144396147615,
+          "safety": 0.04891457775574958,
+          "trust": 0.9751356961159235,
+          "instabilityRisk": 0.9465091132202236,
+          "inequality": 0.9164236896528443
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 30,
+          "policyRevisionCount": 650,
+          "policyRevisionRate": 65,
+          "cityPolicyAction": "balanced_focus",
+          "cityPolicyMutationCount": 3,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.69
+        },
+        "geopolitics": {
+          "avgTension": 0.9259491666666722,
+          "maxAvgTension": 0.99,
+          "maxWarPairs": 7,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 4,
+          "maxInternationalEdgesCount": 29,
+          "restrictionAppliedCount": 6506,
+          "maxRestrictionAppliedCount": 29,
+          "maxBorderRestrictedEdges": 48,
+          "finalStatuses": {
+            "war": 7,
+            "crisis": 3
+          },
+          "borderRestrictedEdges": 36
+        },
+        "social": {
+          "avgInstability": 0.5838708333333337,
+          "avgSafety": 0.49963371773562765,
+          "avgAge": 40.82628690058726,
+          "avgOpenness": 0.34789948961279965,
+          "avgFamilyOriented": 0.35891624719465015,
+          "religiousDiversity": -323.16140862986606,
+          "wealthGini": 0.33114423328501563
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.03769366387246861,
+          "avgEmploymentCapacity": 0.28415222694132447,
+          "avgStrain": 0.8587003335706337,
+          "avgHiringRecoveryMult": 0.7941542208333332,
+          "avgMacroShock": 0.11551271972033174,
+          "avgBaseHireShare": 0.5717947562499991,
+          "avgBaseHireShareEffective": 0.5193419562500002,
+          "p95BaseHireShareEffective": 0.8593972458333312,
+          "avgShockPenalty": 0.005618193750000011,
+          "avgStrainPenalty": 0.1266127833333325,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.5737724229166659,
+          "avgHireChance": 0.38675168333333315
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.0792,
+            "stressed": 0.0375,
+            "fractured": 0.8833,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.2125,
+            "stressed": 0.0313,
+            "fractured": 0.7562,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.2104,
+            "stressed": 0.0313,
+            "fractured": 0.7583,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.0771,
+            "stressed": 0.0417,
+            "fractured": 0.8812,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.0646,
+            "stressed": 0.0333,
+            "fractured": 0.9021,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1729,
+            "stressed": 0.0271,
+            "fractured": 0.8,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.2313,
+            "stressed": 0.0313,
+            "fractured": 0.7375,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1417,
+            "stressed": 0.025,
+            "fractured": 0.8333,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1625,
+            "stressed": 0.0292,
+            "fractured": 0.8083,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.0646,
+            "stressed": 0.0417,
+            "fractured": 0.8938,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.0854,
+            "stressed": 0.0396,
+            "fractured": 0.875,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1875,
+            "stressed": 0.0292,
+            "fractured": 0.7833,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.2208,
+            "stressed": 0.0313,
+            "fractured": 0.7479,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.0708,
+            "stressed": 0.0396,
+            "fractured": 0.8896,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.0479,
+            "stressed": 0.0271,
+            "fractured": 0.925,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.0646,
+            "stressed": 0.0396,
+            "fractured": 0.8958,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0271,
+            "stressed": 0.0229,
+            "fractured": 0.95,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.2188,
+            "stressed": 0.0313,
+            "fractured": 0.75,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.2104,
+            "stressed": 0.0292,
+            "fractured": 0.7604,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.1979,
+            "stressed": 0.0271,
+            "fractured": 0.775,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1958,
+            "stressed": 0.0271,
+            "fractured": 0.7771,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.0875,
+            "stressed": 0.0354,
+            "fractured": 0.8771,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.15,
+            "stressed": 0.0292,
+            "fractured": 0.8208,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.0583,
+            "stressed": 0.1104,
+            "fractured": 0.8313,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.3312,
+            "stressed": 0.0396,
+            "fractured": 0.6292,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.023,
+            "stressed": 0.0256,
+            "fractured": 0.9514,
+            "samples": 391
+          },
+          "C27": {
+            "normal": 0.0345,
+            "stressed": 0.0265,
+            "fractured": 0.939,
+            "samples": 377
+          },
+          "C28": {
+            "normal": 0.0386,
+            "stressed": 0.0275,
+            "fractured": 0.9339,
+            "samples": 363
+          },
+          "C29": {
+            "normal": 0.0344,
+            "stressed": 0.0315,
+            "fractured": 0.9341,
+            "samples": 349
+          },
+          "C30": {
+            "normal": 0.0523,
+            "stressed": 0.04,
+            "fractured": 0.9077,
+            "samples": 325
+          },
+          "C31": {
+            "normal": 0.0386,
+            "stressed": 0.0289,
+            "fractured": 0.9325,
+            "samples": 311
+          },
+          "C32": {
+            "normal": 0.037,
+            "stressed": 0.0269,
+            "fractured": 0.936,
+            "samples": 297
+          },
+          "C33": {
+            "normal": 0.0565,
+            "stressed": 0.0389,
+            "fractured": 0.9046,
+            "samples": 283
+          },
+          "C34": {
+            "normal": 0.0372,
+            "stressed": 0.0297,
+            "fractured": 0.9331,
+            "samples": 269
+          },
+          "C35": {
+            "normal": 0.0353,
+            "stressed": 0.0275,
+            "fractured": 0.9373,
+            "samples": 255
+          },
+          "C36": {
+            "normal": 0.0539,
+            "stressed": 0.0373,
+            "fractured": 0.9087,
+            "samples": 241
+          },
+          "C37": {
+            "normal": 0.036,
+            "stressed": 0.0315,
+            "fractured": 0.9324,
+            "samples": 222
+          },
+          "C38": {
+            "normal": 0.0385,
+            "stressed": 0.0337,
+            "fractured": 0.9279,
+            "samples": 208
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.34972487297256305,
+          "avgTrust": 0.8511375504842453,
+          "avgInstability": 0.7055625,
+          "avgUnemployment": 30.643749999999986,
+          "avgUnemploymentTargetCity": 31.300000000000036,
+          "avgIncome": 0.7521458333333336
+        },
+        "events": {
+          "riotRisk": 2701,
+          "war": 7,
+          "crisis": 1,
+          "sanction": 494
+        }
+      },
+      "intervention": {
+        "name": "C_trait_bias",
+        "ticks": 480,
+        "population": 860,
+        "behavior": {
+          "relocationRatePerTick": 0.019510658914728682,
+          "marriageRatePerTick": 0.0006298449612403101,
+          "birthRatePerTick": 0.000004844961240310078,
+          "avgUnemployment": 30.161874999999956,
+          "avgUnemploymentTargetCity": 23.46020833333334,
+          "avgIncome": 0.6677000000000007
+        },
+        "city": {
+          "targetCityId": "C1",
+          "productivity": 1.308909064894134,
+          "safety": 0.048605351524543525,
+          "trust": 0.974943776858313,
+          "instabilityRisk": 0.99,
+          "inequality": 0.9773414087409772
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": 19,
+          "policyRevisionCount": 660,
+          "policyRevisionRate": 66,
+          "cityPolicyAction": "balanced_focus",
+          "cityPolicyMutationCount": 0,
+          "cityEducationPolicyAction": "balanced",
+          "cityEducationPolicyUpdates": 10
+        },
+        "policyGenome": {
+          "enabled": true,
+          "tick": 480,
+          "lastEvolutionTick": 480,
+          "cityFitness": 0.6736
+        },
+        "geopolitics": {
+          "avgTension": 0.9243351388888943,
+          "maxAvgTension": 0.9900000000000001,
+          "maxWarPairs": 5,
+          "maxCrisisPairs": 10,
+          "internationalEdgesCount": 4,
+          "maxInternationalEdgesCount": 33,
+          "restrictionAppliedCount": 8084,
+          "maxRestrictionAppliedCount": 33,
+          "maxBorderRestrictedEdges": 56,
+          "finalStatuses": {
+            "war": 5,
+            "crisis": 5
+          },
+          "borderRestrictedEdges": 51
+        },
+        "social": {
+          "avgInstability": 0.6520416666666663,
+          "avgSafety": 0.4210492550344003,
+          "avgAge": 40.94370818732144,
+          "avgOpenness": 0.32907953338563184,
+          "avgFamilyOriented": 0.34541305371131753,
+          "religiousDiversity": -322.4007508771808,
+          "wealthGini": 0.3419004035892941
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.04161654220338908,
+          "avgEmploymentCapacity": 0.2929262194358509,
+          "avgStrain": 0.847884203564785,
+          "avgHiringRecoveryMult": 0.7946916916666669,
+          "avgMacroShock": 0.12237235014809267,
+          "avgBaseHireShare": 0.6818441666666639,
+          "avgBaseHireShareEffective": 0.5808745104166676,
+          "p95BaseHireShareEffective": 0.8037999416666702,
+          "avgShockPenalty": 0.00556144166666667,
+          "avgStrainPenalty": 0.12640369791666578,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.6838696854166638,
+          "avgHireChance": 0.4110548583333332
+        },
+        "regimeCountsByCity": {
+          "C1": {
+            "normal": 0.0833,
+            "stressed": 0.0375,
+            "fractured": 0.8792,
+            "samples": 480
+          },
+          "C2": {
+            "normal": 0.2458,
+            "stressed": 0.0333,
+            "fractured": 0.7208,
+            "samples": 480
+          },
+          "C3": {
+            "normal": 0.1979,
+            "stressed": 0.025,
+            "fractured": 0.7771,
+            "samples": 480
+          },
+          "C4": {
+            "normal": 0.0667,
+            "stressed": 0.0354,
+            "fractured": 0.8979,
+            "samples": 480
+          },
+          "C5": {
+            "normal": 0.0729,
+            "stressed": 0.0375,
+            "fractured": 0.8896,
+            "samples": 480
+          },
+          "C6": {
+            "normal": 0.1688,
+            "stressed": 0.025,
+            "fractured": 0.8063,
+            "samples": 480
+          },
+          "C7": {
+            "normal": 0.3021,
+            "stressed": 0.0292,
+            "fractured": 0.6687,
+            "samples": 480
+          },
+          "C8": {
+            "normal": 0.1396,
+            "stressed": 0.025,
+            "fractured": 0.8354,
+            "samples": 480
+          },
+          "C9": {
+            "normal": 0.1646,
+            "stressed": 0.0292,
+            "fractured": 0.8063,
+            "samples": 480
+          },
+          "C10": {
+            "normal": 0.0833,
+            "stressed": 0.0375,
+            "fractured": 0.8792,
+            "samples": 480
+          },
+          "C11": {
+            "normal": 0.0854,
+            "stressed": 0.025,
+            "fractured": 0.8896,
+            "samples": 480
+          },
+          "C12": {
+            "normal": 0.1917,
+            "stressed": 0.0271,
+            "fractured": 0.7813,
+            "samples": 480
+          },
+          "C13": {
+            "normal": 0.2146,
+            "stressed": 0.0313,
+            "fractured": 0.7542,
+            "samples": 480
+          },
+          "C14": {
+            "normal": 0.075,
+            "stressed": 0.0333,
+            "fractured": 0.8917,
+            "samples": 480
+          },
+          "C15": {
+            "normal": 0.0583,
+            "stressed": 0.0313,
+            "fractured": 0.9104,
+            "samples": 480
+          },
+          "C16": {
+            "normal": 0.0625,
+            "stressed": 0.0396,
+            "fractured": 0.8979,
+            "samples": 480
+          },
+          "C17": {
+            "normal": 0.0313,
+            "stressed": 0.025,
+            "fractured": 0.9437,
+            "samples": 480
+          },
+          "C18": {
+            "normal": 0.3604,
+            "stressed": 0.0354,
+            "fractured": 0.6042,
+            "samples": 480
+          },
+          "C19": {
+            "normal": 0.2062,
+            "stressed": 0.0292,
+            "fractured": 0.7646,
+            "samples": 480
+          },
+          "C20": {
+            "normal": 0.2146,
+            "stressed": 0.0271,
+            "fractured": 0.7583,
+            "samples": 480
+          },
+          "C21": {
+            "normal": 0.1812,
+            "stressed": 0.0229,
+            "fractured": 0.7958,
+            "samples": 480
+          },
+          "C22": {
+            "normal": 0.0708,
+            "stressed": 0.0313,
+            "fractured": 0.8979,
+            "samples": 480
+          },
+          "C23": {
+            "normal": 0.1167,
+            "stressed": 0.0271,
+            "fractured": 0.8562,
+            "samples": 480
+          },
+          "C24": {
+            "normal": 0.2083,
+            "stressed": 0.0271,
+            "fractured": 0.7646,
+            "samples": 480
+          },
+          "C25": {
+            "normal": 0.2333,
+            "stressed": 0.0292,
+            "fractured": 0.7375,
+            "samples": 480
+          },
+          "C26": {
+            "normal": 0.0367,
+            "stressed": 0.0289,
+            "fractured": 0.9344,
+            "samples": 381
+          },
+          "C27": {
+            "normal": 0.0369,
+            "stressed": 0.0256,
+            "fractured": 0.9375,
+            "samples": 352
+          },
+          "C28": {
+            "normal": 0.0444,
+            "stressed": 0.0296,
+            "fractured": 0.926,
+            "samples": 338
+          },
+          "C29": {
+            "normal": 0.0309,
+            "stressed": 0.0247,
+            "fractured": 0.9444,
+            "samples": 324
+          },
+          "C30": {
+            "normal": 0.0328,
+            "stressed": 0.023,
+            "fractured": 0.9443,
+            "samples": 305
+          },
+          "C31": {
+            "normal": 0.0241,
+            "stressed": 0.0206,
+            "fractured": 0.9553,
+            "samples": 291
+          },
+          "C32": {
+            "normal": 0.0686,
+            "stressed": 0.0542,
+            "fractured": 0.8773,
+            "samples": 277
+          },
+          "C33": {
+            "normal": 0.0608,
+            "stressed": 0.0456,
+            "fractured": 0.8935,
+            "samples": 263
+          },
+          "C34": {
+            "normal": 0.0562,
+            "stressed": 0.0402,
+            "fractured": 0.9036,
+            "samples": 249
+          },
+          "C35": {
+            "normal": 0.0468,
+            "stressed": 0.0383,
+            "fractured": 0.9149,
+            "samples": 235
+          },
+          "C36": {
+            "normal": 0.0616,
+            "stressed": 0.0474,
+            "fractured": 0.891,
+            "samples": 211
+          },
+          "C37": {
+            "normal": 0.0625,
+            "stressed": 0.0521,
+            "fractured": 0.8854,
+            "samples": 192
+          },
+          "C38": {
+            "normal": 0.0506,
+            "stressed": 0.0449,
+            "fractured": 0.9045,
+            "samples": 178
+          },
+          "C39": {
+            "normal": 0.061,
+            "stressed": 0.0549,
+            "fractured": 0.8841,
+            "samples": 164
+          },
+          "C40": {
+            "normal": 0.06,
+            "stressed": 0.06,
+            "fractured": 0.88,
+            "samples": 150
+          },
+          "C41": {
+            "normal": 0.0809,
+            "stressed": 0.0662,
+            "fractured": 0.8529,
+            "samples": 136
+          },
+          "C42": {
+            "normal": 0.094,
+            "stressed": 0.0769,
+            "fractured": 0.8291,
+            "samples": 117
+          },
+          "C43": {
+            "normal": 0.0816,
+            "stressed": 0.0714,
+            "fractured": 0.8469,
+            "samples": 98
+          }
+        },
+        "lateWindow": {
+          "avgSafety": 0.2913450245636838,
+          "avgTrust": 0.7784877921812393,
+          "avgInstability": 0.7570000000000001,
+          "avgUnemployment": 33.05416666666667,
+          "avgUnemploymentTargetCity": 25,
+          "avgIncome": 0.7434062500000002
+        },
+        "events": {
+          "riotRisk": 2762,
+          "war": 5,
+          "crisis": 6,
+          "sanction": 556
+        }
+      },
+      "delta": {
+        "behavior": {
+          "relocationRatePerTick": -0.001751,
+          "marriageRatePerTick": 0.000113,
+          "birthRatePerTick": -0.00001,
+          "avgUnemployment": 0.919583,
+          "avgUnemploymentTargetCity": -1.745208,
+          "avgIncome": -0.012277
+        },
+        "city": {
+          "productivity": -0.045305,
+          "safety": -0.000309,
+          "trust": -0.000192,
+          "instabilityRisk": 0.043491,
+          "inequality": 0.060918
+        },
+        "institutions": {
+          "cooperationIndex": 0,
+          "mutationCount": -11,
+          "policyRevisionCount": 10,
+          "policyRevisionRate": 1,
+          "cityPolicyMutationCount": -3,
+          "cityEducationPolicyUpdates": 0
+        },
+        "geopolitics": {
+          "avgTension": -0.001614,
+          "maxAvgTension": 0,
+          "maxWarPairs": -2,
+          "maxCrisisPairs": 0,
+          "internationalEdgesCount": 0,
+          "maxInternationalEdgesCount": 4,
+          "restrictionAppliedCount": 1578,
+          "maxRestrictionAppliedCount": 4,
+          "maxBorderRestrictedEdges": 8,
+          "borderRestrictedEdges": 15
+        },
+        "social": {
+          "avgInstability": 0.068171,
+          "avgSafety": -0.078584,
+          "avgAge": 0.117421,
+          "religiousDiversity": 0.760658,
+          "wealthGini": 0.010756
+        },
+        "unemploymentDrivers": {
+          "avgOpenPositionsPerPerson": 0.003923,
+          "avgEmploymentCapacity": 0.008774,
+          "avgStrain": -0.010816,
+          "avgHiringRecoveryMult": 0.000537,
+          "avgMacroShock": 0.00686,
+          "avgBaseHireShare": 0.110049,
+          "avgBaseHireShareEffective": 0.061533,
+          "p95BaseHireShareEffective": -0.055597,
+          "avgShockPenalty": -0.000057,
+          "avgStrainPenalty": -0.000209,
+          "avgPolicySupport": 0,
+          "avgCapacityRatio": 0.110097,
+          "avgHireChance": 0.024303
+        }
+      }
+    }
+  },
+  "principles": {
+    "emergenceOverScripting": {
+      "pass": false,
+      "rationale": "Interventions create systemic responses without scripted event injection.",
+      "evidenceFrom": [
+        "testA",
+        "testB"
+      ]
+    },
+    "reciprocalCausality": {
+      "pass": false,
+      "rationale": "Policy/institution intervention -> individual behavior changes -> city/system indicators -> policy adaptation.",
+      "evidenceFrom": [
+        "testA"
+      ]
+    },
+    "multiScaleCoevolution": {
+      "pass": true,
+      "rationale": "Shock and trait-distribution interventions propagate across person/city/nation/world-order layers.",
+      "evidenceFrom": [
+        "testB",
+        "testC"
+      ]
+    }
+  },
+  "verdict": {
+    "passCount": 1,
+    "total": 3,
+    "pass": false,
+    "label": "Partial verification; inspect failing test evidence."
+  }
+}
