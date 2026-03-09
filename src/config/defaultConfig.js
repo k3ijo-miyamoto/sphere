@@ -273,6 +273,34 @@ export const DEFAULT_CONFIG = {
       boostDecay: 0.9
     }
   },
+  companyTypes: {
+    enabled: true,
+    baseTypeDistribution: {
+      workHub: { General: 0.7, IT: 0.2, Military: 0.1 },
+      mixed: { General: 0.8, IT: 0.18, Military: 0.02 },
+      residential: { General: 0.95, IT: 0.05, Military: 0.001 },
+      default: { General: 0.82, IT: 0.14, Military: 0.04 }
+    },
+    it: {
+      rdEfficiency: 0.35,
+      networkStrength: 0.32,
+      networkCap: 1.2,
+      baseRegulation: 0.12,
+      regulationSensitivity: 0.4
+    },
+    military: {
+      tensionSensitivity: 0.7,
+      warBonus: 0.45,
+      sanctionSensitivity: 0.35
+    },
+    safety: {
+      profitCapScale: 1,
+      lossCapScale: 1,
+      maxValuationGrowthPerTick: 0.25,
+      concentrationThreshold: 0.42,
+      concentrationPenaltyScale: 0.7
+    }
+  },
   extensions: {
     epidemic: {
       enabled: true,
@@ -292,6 +320,10 @@ export const DEFAULT_CONFIG = {
     safetyBudget: 0.5,
     welfareBudget: 0.5,
     educationBudget: 0.5,
+    antitrustStrength: 0.22,
+    defenseProcurementCap: 0.68,
+    dividendTaxRate: 0.08,
+    warAuditRate: 0.08,
     targetEmploymentCityId: null,
     targetEmploymentBoost: 0,
     targetEmploymentBoostTicks: 0,

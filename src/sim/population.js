@@ -78,6 +78,8 @@ export class PopulationSystem {
         const company = createCompany({
           id: this.nextCompanyId,
           city,
+          world: this.world,
+          config: this.config,
           rng: this.rng,
           foundingDay: 0
         });
@@ -249,6 +251,7 @@ export class PopulationSystem {
         companies: this.companies,
         people: this.people,
         world: this.world,
+        config: this.config,
         rng: this.rng,
         day,
         nextCompanyIdRef: () => {
@@ -1550,6 +1553,10 @@ function applyEmploymentAndEconomy({
   minuteOfDay,
   rng
 }) {
+  world.systemState = world.systemState ?? {};
+  const policyState = ensureCompanyPolicyState(world, config?.policy ?? {});
+  const policyCfg = config?.policy ?? {};
+  const antitrustStrength = clamp((policyCfg.antitrustStrength ?? 0.22) + (policyState.antitrustAutoBoost ?? 0), 0, 1);
   const marketIndex = world.systemState?.marketIndex ?? 1;
   const epidemic = world.systemState?.epidemicLevel ?? 0;
   const climate = world.systemState?.climateStress ?? 0;
@@ -1559,11 +1566,14 @@ function applyEmploymentAndEconomy({
   const competitionPenalty = config.company?.competitionPenalty ?? 0.08;
   const supplyChainEffect = config.company?.supplyChainEffect ?? 0.12;
   const stockVolatility = config.company?.stockVolatility ?? 0.04;
+  const typeCfg = config.companyTypes ?? {};
+  const typeSafety = typeCfg.safety ?? {};
   if (phase === "Daytime") {
     applyCompanyRlActions({ companies, config, rng });
   }
   const workersByCity = new Map(world.cities.map((c) => [c.id, []]));
   for (const company of companies) {
+    ensureCompanyTypeState(company);
     company.employeeCount = 0;
     company.revenueTick = 0;
     company.costTick = 0;
@@ -1740,6 +1750,14 @@ function applyEmploymentAndEconomy({
     }
     sectorCrowdByCity.set(city.id, crowd);
   }
+  const concentrationStats = computeConcentrationPenaltyByCompany(companies, world, typeCfg, antitrustStrength);
+  const concentrationPenaltyByCompanyId = concentrationStats.byCompany;
+  policyState.lastMaxHHI = concentrationStats.maxHhi;
+  policyState.lastAvgHHI = concentrationStats.avgHhi;
+  policyState.lastPenaltyRatio = concentrationStats.penaltyRatio;
+  const hhiPressure = Math.max(0, concentrationStats.maxHhi - concentrationStats.threshold);
+  policyState.antitrustAutoBoost = Number(clamp((policyState.antitrustAutoBoost ?? 0) * 0.8 + hhiPressure * 0.45, 0, 0.6).toFixed(4));
+  policyState.effectiveAntitrust = antitrustStrength;
 
   const supplyEfficiencyBoost = buildSupplyBoostMap(companies, companyById, supplyChainEffect);
   const learningRate = config.economy?.skillLearningRate ?? 0.012;
@@ -1798,7 +1816,14 @@ function applyEmploymentAndEconomy({
         shockPenalty *
         resourceOutputFactor *
         techCtx.productivityBoost;
-      employer.revenueTick += output * employer.pricePower * marketIndex * exportCompetitiveness;
+      const typeRevenueMult = computeCompanyTypeRevenueMultiplier({
+        company: employer,
+        world,
+        city,
+        person,
+        config
+      });
+      employer.revenueTick += output * employer.pricePower * marketIndex * exportCompetitiveness * typeRevenueMult;
       employer.costTick += income * 0.9 * resourceCostFactor * fxCostFactor;
     }
 
@@ -1826,13 +1851,28 @@ function applyEmploymentAndEconomy({
   const valuationCfg = config.company?.valuation ?? {};
   const hyperGrowthCfg = config.company?.hyperGrowth ?? {};
   for (const company of companies) {
+    ensureCompanyTypeState(company);
     const companyCity = world.getCityById(company.cityId);
     const regimeFx = getCityRegimeEffects(companyCity, config);
     const fixedCost = 0.08 + company.capacity * 0.06;
     const prevValuation = Math.max(0.0001, Number(company.valuation ?? company.capital ?? 0.3));
     company.revenue = company.revenue * 0.82 + company.revenueTick * 0.18;
     company.cost = company.cost * 0.82 + (company.costTick + fixedCost * (2 - regimeFx.hiringRecoveryMult)) * 0.18;
-    company.profit = company.revenue - company.cost;
+    const rawProfit = company.revenue - company.cost;
+    const profitCapScale = Math.max(0.35, Number(typeSafety.profitCapScale ?? 1));
+    const lossCapScale = Math.max(0.35, Number(typeSafety.lossCapScale ?? 1));
+    const profitCap = Math.max(0.04, 0.35 * profitCapScale);
+    const lossCap = Math.max(0.04, 0.35 * lossCapScale);
+    company.profit = clamp(rawProfit, -lossCap, profitCap);
+    if (company.companyType === "Military") {
+      const warLoad = countWarRelationsForNation(world, companyCity?.nationId);
+      const warAuditRate = clamp((policyCfg.warAuditRate ?? 0.08) * warLoad, 0, 0.25);
+      if (warAuditRate > 0 && company.profit > 0) {
+        const levy = company.profit * warAuditRate;
+        company.profit -= levy;
+        policyState.redistributionPool = Number(((policyState.redistributionPool ?? 0) + levy).toFixed(6));
+      }
+    }
     const recoveryDrag = 1 - clamp((companyCity?.strain ?? 0) * 0.35, 0, 0.45);
     company.capital = clamp01(company.capital + company.profit * 0.01 * regimeFx.hiringRecoveryMult * recoveryDrag);
     const trend = (company.profit - (company.profitPrev ?? 0)) * 0.2 + company.capital * 0.03;
@@ -1858,6 +1898,9 @@ function applyEmploymentAndEconomy({
     const nonlinear = Math.pow(1 + positiveProfit * profitScale, 1.08) * (1 + Math.pow(company.growthExpectation, growthScale));
     const lossDrag = 1 + loss * lossPenaltyScale;
     let valuation = baseValuation * nonlinear / lossDrag;
+    const concentrationPenalty = concentrationPenaltyByCompanyId.get(company.id) ?? 1;
+    company.concentrationPenalty = Number(concentrationPenalty.toFixed(6));
+    valuation *= concentrationPenalty;
 
     const baseHyperChance = clamp(Number(hyperGrowthCfg.chance ?? 0.003), 0, 0.05);
     const hyperChance = baseHyperChance * clamp(0.6 + company.growthExpectation * 0.9 + positiveProfit * 0.6, 0.5, 2.2);
@@ -1874,7 +1917,10 @@ function applyEmploymentAndEconomy({
       const decay = clamp(Number(hyperGrowthCfg.boostDecay ?? 0.9), 0.65, 0.99);
       company.hyperGrowthBoost = clamp(1 + (company.hyperGrowthBoost - 1) * decay, 1, 12);
     }
-    company.valuation = clamp(valuation, valMin, valMax * 4);
+    const maxValuationGrowthPerTick = Math.max(0.01, Number(typeSafety.maxValuationGrowthPerTick ?? 0.25));
+    const valuationGrowthRatio = clamp(valuation / Math.max(0.0001, prevValuation), 1 - maxValuationGrowthPerTick, 1 + maxValuationGrowthPerTick);
+    const valuationCapped = prevValuation * valuationGrowthRatio;
+    company.valuation = clamp(valuationCapped, valMin, valMax * 4);
     const valuationReturn = (company.valuation - prevValuation) / Math.max(0.0001, prevValuation);
     company.stockPrice = Math.max(0.4, (company.stockPrice ?? 1) * (1 + trend + noise + valuationReturn * 0.16));
     company.profitPrev = company.profit;
@@ -1884,7 +1930,7 @@ function applyEmploymentAndEconomy({
     const total = cityRevenue.get(company.cityId) ?? 1;
     company.marketShare = Number(((company.revenue / total) * 100).toFixed(2));
   }
-  distributeCompanyDividends({ people, companies, config });
+  distributeCompanyDividends({ people, companies, config, world, phase });
   updateCompanyRlLearning({ companies, config, phase });
   simulateTechnologyProgress({ companies, world, rng, phase });
   advanceSchoolLearning({ people, world, phase, config, rng });
@@ -3223,18 +3269,26 @@ function simulateDemographics({ people, world, rng, phase, day, nextPersonId, us
   const births = [];
   const cityBirths = new Map(world.cities.map((city) => [city.id, 0]));
   const cityDeaths = new Map(world.cities.map((city) => [city.id, 0]));
+  const cityWarDeaths = new Map(world.cities.map((city) => [city.id, 0]));
   const cityMarriages = new Map(world.cities.map((city) => [city.id, 0]));
   const cityDivorces = new Map(world.cities.map((city) => [city.id, 0]));
   const allCityIds = world.cities.map((city) => city.id);
   const workCityIds = world.cities.filter((city) => city.cityType !== "residential").map((city) => city.id);
+  const warExposureByCity = computeWarExposureByCity(world);
+  let totalWarDeaths = 0;
 
   for (const person of people) {
     if (phase === "Night") {
       person.age += 1 / 365;
     }
 
-    if (isDeathEvent(person, world, rng)) {
+    const deathCause = getDeathCause(person, world, rng, warExposureByCity);
+    if (deathCause) {
       cityDeaths.set(person.currentCityId, (cityDeaths.get(person.currentCityId) ?? 0) + 1);
+      if (deathCause === "war") {
+        cityWarDeaths.set(person.currentCityId, (cityWarDeaths.get(person.currentCityId) ?? 0) + 1);
+        totalWarDeaths += 1;
+      }
       continue;
     }
     alive.push(person);
@@ -3302,6 +3356,7 @@ function simulateDemographics({ people, world, rng, phase, day, nextPersonId, us
       cityId: city.id,
       births: b,
       deaths: d,
+      warDeaths: cityWarDeaths.get(city.id) ?? 0,
       marriages: m,
       divorces: dv,
       net: b - d
@@ -3326,6 +3381,7 @@ function simulateDemographics({ people, world, rng, phase, day, nextPersonId, us
     summary: {
       totalBirths: births.length,
       totalDeaths: people.length - alive.length,
+      totalWarDeaths,
       totalMarriages: cityStats.reduce((sum, row) => sum + row.marriages, 0),
       totalDivorces: cityStats.reduce((sum, row) => sum + row.divorces, 0),
       totalCohabStarts: relationEvents.cohabStarts,
@@ -3337,7 +3393,7 @@ function simulateDemographics({ people, world, rng, phase, day, nextPersonId, us
   };
 }
 
-function isDeathEvent(person, world, rng) {
+function getDeathCause(person, world, rng, warExposureByCity = null) {
   const city = world.getCityById(person.currentCityId);
   const safety = city?.metrics?.safety ?? 0.5;
   const health = person.ability.health;
@@ -3351,8 +3407,65 @@ function isDeathEvent(person, world, rng) {
 
   const epidemic = world.systemState?.epidemicLevel ?? 0;
   const climate = world.systemState?.climateStress ?? 0;
-  const risk = ageFactor * (1.2 - safety * 0.4) * (1.25 - health * 0.5) * (1 + epidemic * 0.8 + climate * 0.3);
-  return rng.next() < risk;
+  const naturalRisk = ageFactor * (1.2 - safety * 0.4) * (1.25 - health * 0.5) * (1 + epidemic * 0.8 + climate * 0.3);
+  if (rng.next() < naturalRisk) {
+    return "natural";
+  }
+  const warExposure = warExposureByCity?.get(person.currentCityId) ?? 0;
+  if (warExposure <= 0) {
+    return null;
+  }
+  const ageWarMult =
+    person.age < 14 ? 0.38
+    : person.age < 56 ? 1
+    : 0.72;
+  const warRisk = clamp((0.00008 + warExposure * 0.0024) * ageWarMult * (1.08 - safety * 0.35) * (1.06 - health * 0.25), 0, 0.04);
+  return rng.next() < warRisk ? "war" : null;
+}
+
+function computeWarExposureByCity(world) {
+  const out = new Map((world.cities ?? []).map((city) => [city.id, 0]));
+  const diplomacy = world.systemState?.geopolitics?.diplomacy ?? {};
+  const pairWarSet = new Set();
+  for (const [key, rel] of Object.entries(diplomacy)) {
+    if (rel?.status !== "war") {
+      continue;
+    }
+    const [aId, bId] = key.split("|");
+    if (!aId || !bId) {
+      continue;
+    }
+    pairWarSet.add(`${aId}|${bId}`);
+    const tension = clamp(rel.tension ?? 0.8, 0, 1);
+    const pressure = 0.22 + tension * 0.28;
+    const na = world.getNationById(aId);
+    const nb = world.getNationById(bId);
+    for (const cityId of na?.cityIds ?? []) {
+      out.set(cityId, (out.get(cityId) ?? 0) + pressure);
+    }
+    for (const cityId of nb?.cityIds ?? []) {
+      out.set(cityId, (out.get(cityId) ?? 0) + pressure);
+    }
+  }
+  for (const edge of world.edges ?? []) {
+    const a = world.getCityById(edge.fromCityId);
+    const b = world.getCityById(edge.toCityId);
+    if (!a || !b || !a.nationId || !b.nationId || a.nationId === b.nationId) {
+      continue;
+    }
+    const fwd = `${a.nationId}|${b.nationId}`;
+    const rev = `${b.nationId}|${a.nationId}`;
+    if (!pairWarSet.has(fwd) && !pairWarSet.has(rev)) {
+      continue;
+    }
+    const edgeEscalation = 0.35 + (edge.gatewayRestriction === "sealed" ? 0.12 : 0);
+    out.set(a.id, (out.get(a.id) ?? 0) + edgeEscalation);
+    out.set(b.id, (out.get(b.id) ?? 0) + edgeEscalation);
+  }
+  for (const [cityId, score] of out.entries()) {
+    out.set(cityId, clamp(score, 0, 1.6));
+  }
+  return out;
 }
 
 function isBirthEvent(mother, father, world, rng, religionProfiles, day) {
@@ -3450,9 +3563,9 @@ function updatePartnershipDynamics({ people, world, rng, phase, day, cityDivorce
     partner.householdStability = clamp01(partner.householdStability * 0.8 + targetStability * 0.2);
 
     const relationshipDays = person.partnerSinceDay == null ? 0 : Math.max(0, day - person.partnerSinceDay);
-    if (!person.cohabiting && person.relationshipQuality > 0.66 && relationshipDays >= 3) {
+    if (!person.cohabiting && person.relationshipQuality > 0.62 && relationshipDays >= 2) {
       const familyDrive = (person.traits.familyOriented + partner.traits.familyOriented) * 0.5;
-      if (rng.next() < 0.08 + familyDrive * 0.18) {
+      if (rng.next() < 0.12 + familyDrive * 0.24) {
         person.cohabiting = true;
         partner.cohabiting = true;
         cohabStarts += 1;
@@ -3507,7 +3620,7 @@ function formNightPartnerships(people, world, rng, day) {
     if (person.age < 18 || person.age > 58) {
       continue;
     }
-    if (person.lastBreakupDay != null && day - person.lastBreakupDay < 3) {
+    if (person.lastBreakupDay != null && day - person.lastBreakupDay < 2) {
       continue;
     }
     if (person.currentState !== "Leisure") {
@@ -3544,10 +3657,10 @@ function formNightPartnerships(people, world, rng, day) {
         }
       }
 
-      if (!best || bestScore < 0.55) {
+      if (!best || bestScore < 0.5) {
         continue;
       }
-      if (rng.next() > bestScore) {
+      if (rng.next() > Math.min(0.97, bestScore + 0.08)) {
         continue;
       }
 
@@ -3560,7 +3673,7 @@ function formNightPartnerships(people, world, rng, day) {
       a.householdStability = clamp01(0.45 + a.relationshipQuality * 0.4);
       best.householdStability = a.householdStability;
       const familyDrive = (a.traits.familyOriented + best.traits.familyOriented) * 0.5;
-      const startCohab = bestScore > 0.82 && rng.next() < 0.1 + familyDrive * 0.2;
+      const startCohab = bestScore > 0.74 && rng.next() < 0.14 + familyDrive * 0.26;
       a.cohabiting = startCohab;
       best.cohabiting = startCohab;
       marriages.push({ cityId: city.id, personAId: a.id, personBId: best.id });
@@ -4134,7 +4247,7 @@ function groupCompaniesByCity(companies, world) {
   return byCity;
 }
 
-function applyCompanyLifecycle({ companies, people, world, rng, day, nextCompanyIdRef }) {
+function applyCompanyLifecycle({ companies, people, world, config, rng, day, nextCompanyIdRef }) {
   const events = [];
   const removeIds = new Set();
   const byCity = groupCompaniesByCity(companies, world);
@@ -4202,6 +4315,8 @@ function applyCompanyLifecycle({ companies, people, world, rng, day, nextCompany
       const company = createCompany({
         id: nextCompanyIdRef(),
         city,
+        world,
+        config,
         rng,
         foundingDay: day
       });
@@ -4216,18 +4331,214 @@ function applyCompanyLifecycle({ companies, people, world, rng, day, nextCompany
   return events.slice(0, 8);
 }
 
-function createCompany({ id, city, rng, foundingDay = 0 }) {
+function pickCompanyType({ city, world, config, rng }) {
+  const typeCfg = config?.companyTypes ?? {};
+  const base = typeCfg.baseTypeDistribution ?? {};
+  const cityDist = base[city.cityType] ?? base.default ?? { General: 0.8, IT: 0.15, Military: 0.05 };
+  const tension = estimateGlobalTension(world);
+  const education = clamp01((city.metrics?.trust ?? 0.5) * 0.35 + (city.metrics?.productivity ?? 0.5) * 0.4 + (1 - (city.metrics?.instabilityRisk ?? 0.2)) * 0.25);
+  let general = Math.max(0.01, Number(cityDist.General ?? 0.8));
+  let it = Math.max(0.01, Number(cityDist.IT ?? 0.15));
+  let military = Math.max(0.01, Number(cityDist.Military ?? 0.05));
+  it *= 1 + education * 0.35 - tension * 0.1;
+  military *= 1 + tension * 0.55;
+  general *= 1 - tension * 0.12;
+  const sum = general + it + military;
+  const x = rng.range(0, sum);
+  if (x < it) {
+    return "IT";
+  }
+  if (x < it + military) {
+    return "Military";
+  }
+  return "General";
+}
+
+function ensureCompanyTypeState(company) {
+  company.companyType = company.companyType ?? "General";
+  company.rdStock = clamp01(company.rdStock ?? (company.companyType === "IT" ? 0.32 : company.companyType === "Military" ? 0.14 : 0.18));
+  company.networkEffect = Math.max(0, Number(company.networkEffect ?? (company.companyType === "IT" ? 0.28 : 0.08)));
+  company.compliance = clamp01(company.compliance ?? (company.companyType === "Military" ? 0.72 : 0.58));
+  company.lobbyPower = clamp01(company.lobbyPower ?? (company.companyType === "Military" ? 0.42 : 0.16));
+  company.defenseContractShare = clamp01(company.defenseContractShare ?? (company.companyType === "Military" ? 0.58 : 0));
+  company.concentrationPenalty = clamp(Number(company.concentrationPenalty ?? 1), 0.35, 1);
+}
+
+function ensureCompanyPolicyState(world, policyCfg = {}) {
+  world.systemState = world.systemState ?? {};
+  const state = (world.systemState.companyPolicy = world.systemState.companyPolicy ?? {
+    antitrustAutoBoost: 0,
+    redistributionPool: 0,
+    lastRedistributed: 0,
+    lastMaxHHI: 0,
+    lastAvgHHI: 0,
+    lastPenaltyRatio: 0,
+    effectiveAntitrust: clamp(policyCfg?.antitrustStrength ?? 0.22, 0, 1)
+  });
+  state.antitrustAutoBoost = clamp(Number(state.antitrustAutoBoost ?? 0), 0, 0.6);
+  state.redistributionPool = Math.max(0, Number(state.redistributionPool ?? 0));
+  state.lastRedistributed = Math.max(0, Number(state.lastRedistributed ?? 0));
+  state.lastMaxHHI = Math.max(0, Number(state.lastMaxHHI ?? 0));
+  state.lastAvgHHI = Math.max(0, Number(state.lastAvgHHI ?? 0));
+  state.lastPenaltyRatio = clamp(Number(state.lastPenaltyRatio ?? 0), 0, 1);
+  state.effectiveAntitrust = clamp(Number(state.effectiveAntitrust ?? (policyCfg?.antitrustStrength ?? 0.22)), 0, 1);
+  return state;
+}
+
+function estimateGlobalTension(world) {
+  const geo = world?.systemState?.geopolitics ?? {};
+  const rows = Array.isArray(geo.relations)
+    ? geo.relations
+    : Object.values(geo.diplomacy ?? {});
+  if (!rows.length) {
+    return 0.25;
+  }
+  const avg = rows.reduce((sum, row) => sum + (Number(row?.tension) || 0), 0) / rows.length;
+  return clamp(avg, 0, 1);
+}
+
+function estimateDefenseBudgetFactor(world, city) {
+  const nationId = city?.nationId ?? null;
+  const geo = world?.systemState?.geopolitics ?? {};
+  const nation = (geo.nations ?? []).find((n) => n.id === nationId);
+  const stress = Number(nation?.stress ?? 0.2);
+  const power = Number(nation?.power ?? 0.3);
+  const tension = estimateGlobalTension(world);
+  const explicitBudget = Number(nation?.defenseBudget ?? NaN);
+  if (Number.isFinite(explicitBudget)) {
+    return clamp(explicitBudget, 0, 1.4);
+  }
+  return clamp(0.18 + tension * 0.55 + stress * 0.3 + power * 0.08, 0.08, 1.4);
+}
+
+function computeCompanyTypeRevenueMultiplier({ company, world, city, person, config }) {
+  ensureCompanyTypeState(company);
+  const typeCfg = config?.companyTypes ?? {};
+  const it = typeCfg.it ?? {};
+  const military = typeCfg.military ?? {};
+  const policyCfg = config?.policy ?? {};
+  const nation = (world?.systemState?.geopolitics?.nations ?? []).find((n) => n.id === city?.nationId);
+  const tension = estimateGlobalTension(world);
+  const sanctions = clamp(
+    Math.max(
+      Number(world?.systemState?.geopolitics?.sanctionPressure ?? 0),
+      Number(nation?.militaryExportControl ?? 0) * 0.8
+    ),
+    0,
+    1
+  );
+  if (company.companyType === "IT") {
+    const talent = clamp((person?.ability?.cognitive ?? 0.5) * 0.55 + (person?.socioeconomic?.education ?? 0.5) * 0.45, 0.3, 1.4);
+    const rdFactor = 1 + company.rdStock * Math.max(0, Number(it.rdEfficiency ?? 0.35));
+    const netCap = Math.max(0.1, Number(it.networkCap ?? 1.2));
+    const networkFactor = 1 + Math.min(netCap, company.networkEffect) * Math.max(0, Number(it.networkStrength ?? 0.32));
+    const baseReg = clamp(Number(nation?.itRegulationLevel ?? it.baseRegulation ?? 0.12), 0, 0.9);
+    const regPenalty = 1 - baseReg * Math.max(0, Number(it.regulationSensitivity ?? 0.4));
+    const conc = clamp(company.concentrationPenalty ?? 1, 0.35, 1);
+    return clamp(talent * rdFactor * networkFactor * regPenalty * conc, 0.5, 2.4);
+  }
+  if (company.companyType === "Military") {
+    const defenseBudgetFactor = estimateDefenseBudgetFactor(world, city);
+    const tensionFactor = 1 + tension * Math.max(0, Number(military.tensionSensitivity ?? 0.7));
+    const warMultiplier = 1 + Math.max(0, Number(military.warBonus ?? 0.45)) * countWarRelationsForNation(world, city?.nationId);
+    const sanctionPenalty = 1 - sanctions * Math.max(0, Number(military.sanctionSensitivity ?? 0.35));
+    const contract = 0.85 + company.defenseContractShare * 0.4;
+    const procurementCap = clamp(Number(policyCfg.defenseProcurementCap ?? 0.68), 0.2, 1);
+    const overCap = Math.max(0, company.defenseContractShare - procurementCap);
+    const procurementCapPenalty = clamp(1 - overCap * 1.8, 0.45, 1);
+    const conc = clamp(company.concentrationPenalty ?? 1, 0.35, 1);
+    return clamp(defenseBudgetFactor * tensionFactor * warMultiplier * sanctionPenalty * contract * procurementCapPenalty * conc, 0.45, 2.6);
+  }
+  return clamp(company.concentrationPenalty ?? 1, 0.35, 1);
+}
+
+function countWarRelationsForNation(world, nationId) {
+  if (!nationId) {
+    return 0;
+  }
+  const geo = world?.systemState?.geopolitics ?? {};
+  const rows = Array.isArray(geo.relations)
+    ? geo.relations
+    : Object.values(geo.diplomacy ?? {});
+  if (!rows.length) {
+    return 0;
+  }
+  const wars = rows.filter((r) => (r?.status ?? "") === "war" && (r?.nationAId === nationId || r?.nationBId === nationId)).length;
+  return clamp(wars / 4, 0, 1.5);
+}
+
+function computeConcentrationPenaltyByCompany(companies, world, typeCfg, antitrustStrength = 0) {
+  const out = new Map();
+  if (!Array.isArray(companies) || companies.length === 0) {
+    return { byCompany: out, maxHhi: 0, avgHhi: 0, threshold: 0.42, penaltyRatio: 0 };
+  }
+  const threshold = clamp(Number(typeCfg?.safety?.concentrationThreshold ?? 0.42), 0.1, 0.95);
+  const antitrust = clamp(Number(antitrustStrength ?? 0), 0, 1);
+  const penaltyScale = clamp(Number(typeCfg?.safety?.concentrationPenaltyScale ?? 0.7) * (1 + antitrust * 1.6), 0, 4.5);
+  const groups = new Map();
+  for (const c of companies) {
+    ensureCompanyTypeState(c);
+    const key = `${c.cityId}|${c.companyType}`;
+    const arr = groups.get(key) ?? [];
+    arr.push(c);
+    groups.set(key, arr);
+  }
+  let hhiSum = 0;
+  let groupCount = 0;
+  let maxHhi = 0;
+  let penalizedCompanies = 0;
+  for (const arr of groups.values()) {
+    const total = Math.max(0.0001, arr.reduce((sum, c) => sum + Math.max(0.0001, Number(c.capital ?? 0.1)), 0));
+    let hhi = 0;
+    for (const c of arr) {
+      const share = Math.max(0, Number(c.capital ?? 0)) / total;
+      hhi += share * share;
+    }
+    hhiSum += hhi;
+    groupCount += 1;
+    maxHhi = Math.max(maxHhi, hhi);
+    const over = Math.max(0, hhi - threshold);
+    const penalty = clamp(1 - over * penaltyScale, 0.35, 1);
+    for (const c of arr) {
+      out.set(c.id, penalty);
+      if (penalty < 0.999) {
+        penalizedCompanies += 1;
+      }
+    }
+  }
+  for (const c of companies) {
+    if (!out.has(c.id)) {
+      out.set(c.id, 1);
+    }
+  }
+  return {
+    byCompany: out,
+    maxHhi: Number(maxHhi.toFixed(6)),
+    avgHhi: Number((hhiSum / Math.max(1, groupCount)).toFixed(6)),
+    threshold,
+    penaltyRatio: Number((penalizedCompanies / Math.max(1, companies.length)).toFixed(6))
+  };
+}
+
+function createCompany({ id, city, world, config, rng, foundingDay = 0 }) {
   const sectors = city.cityType === "workHub"
     ? ["Industry", "Finance", "Logistics", "Tech"]
     : city.cityType === "mixed"
     ? ["Retail", "Services", "Craft", "Tech"]
     : ["LocalService", "Agri", "Retail"];
   const sector = pickOne(sectors, rng);
+  const companyType = pickCompanyType({ city, world, config, rng });
+  const rdSeed = companyType === "IT" ? rng.range(0.22, 0.64) : companyType === "Military" ? rng.range(0.06, 0.22) : rng.range(0.08, 0.3);
+  const networkSeed = companyType === "IT" ? rng.range(0.16, 0.62) : rng.range(0.02, 0.2);
+  const complianceSeed = companyType === "Military" ? rng.range(0.45, 0.9) : rng.range(0.35, 0.85);
+  const lobbySeed = companyType === "Military" ? rng.range(0.25, 0.7) : rng.range(0.04, 0.38);
+  const defenseContractSeed = companyType === "Military" ? rng.range(0.35, 0.9) : rng.range(0, 0.08);
   return {
     id,
     name: `${city.name} ${sector} ${id}`,
     cityId: city.id,
     sector,
+    companyType,
     capacity: rng.range(0.45, 0.95),
     efficiency: rng.range(0.5, 1.2),
     wageMultiplier: rng.range(0.85, 1.25),
@@ -4250,6 +4561,12 @@ function createCompany({ id, city, rng, foundingDay = 0 }) {
     hyperGrowthBoost: 1,
     hyperGrowthEvent: false,
     lastHyperGrowthDay: -1,
+    rdStock: rdSeed,
+    networkEffect: networkSeed,
+    compliance: complianceSeed,
+    lobbyPower: lobbySeed,
+    defenseContractShare: defenseContractSeed,
+    concentrationPenalty: 1,
     employeeCount: 0,
     revenueTick: 0,
     costTick: 0,
@@ -4315,13 +4632,16 @@ function assignFounderOwnership({ company, people, cityId, day, rng }) {
   normalizeCapTable(company);
 }
 
-function distributeCompanyDividends({ people, companies, config }) {
+function distributeCompanyDividends({ people, companies, config, world, phase }) {
   if (!Array.isArray(people) || !Array.isArray(companies) || !people.length || !companies.length) {
     return;
   }
   const payoutRatio = clamp(config?.company?.dividendPayoutRatio ?? 0.12, 0, 0.8);
   const payoutScale = clamp(config?.company?.dividendScale ?? 0.08, 0, 1);
+  const dividendTaxRate = clamp(config?.policy?.dividendTaxRate ?? 0.08, 0, 0.7);
+  const policyState = ensureCompanyPolicyState(world, config?.policy ?? {});
   const byId = new Map(people.map((p) => [Number(p.id), p]));
+  let taxedTotal = 0;
   for (const company of companies) {
     ensureCapTable(company);
     const positiveProfit = Math.max(0, Number(company.profit ?? 0));
@@ -4354,16 +4674,54 @@ function distributeCompanyDividends({ people, companies, config }) {
         continue;
       }
       const grossDividend = payoutPool * ownership;
-      const bankPart = grossDividend * 0.82;
-      const cashPart = grossDividend - bankPart;
+      const tax = grossDividend * dividendTaxRate;
+      const netDividend = grossDividend - tax;
+      const bankPart = netDividend * 0.82;
+      const cashPart = netDividend - bankPart;
       person.socioeconomic.bankDeposit = clamp01((person.socioeconomic.bankDeposit ?? 0) + bankPart);
       person.socioeconomic.cash = clamp01((person.socioeconomic.cash ?? 0) + cashPart);
       person.socioeconomic.wealth = computeSocioeconomicWealth(person.socioeconomic);
-      distributed += grossDividend;
+      distributed += netDividend;
+      taxedTotal += tax;
     }
     company.dividendPaidLastTick = Number(distributed.toFixed(6));
     company.capital = clamp01((company.capital ?? 0) - distributed * 0.6);
   }
+  if (taxedTotal > 0) {
+    policyState.redistributionPool = Number(((policyState.redistributionPool ?? 0) + taxedTotal).toFixed(6));
+  }
+  if (phase === "Night") {
+    applyDividendRedistribution({ people, policyState });
+  }
+}
+
+function applyDividendRedistribution({ people, policyState }) {
+  const pool = Number(policyState?.redistributionPool ?? 0);
+  if (!Number.isFinite(pool) || pool <= 0) {
+    return;
+  }
+  const recipients = people
+    .filter((p) => Number(p.age ?? 0) >= 18)
+    .map((p) => {
+      ensureSocioeconomicBreakdown(p);
+      return { person: p, wealth: Number(p.socioeconomic?.wealth ?? 0) };
+    })
+    .sort((a, b) => a.wealth - b.wealth)
+    .slice(0, Math.max(8, Math.floor(people.length * 0.4)));
+  if (!recipients.length) {
+    return;
+  }
+  const unit = pool / recipients.length;
+  for (const row of recipients) {
+    const person = row.person;
+    const bankPart = unit * 0.8;
+    const cashPart = unit - bankPart;
+    person.socioeconomic.bankDeposit = clamp01((person.socioeconomic.bankDeposit ?? 0) + bankPart);
+    person.socioeconomic.cash = clamp01((person.socioeconomic.cash ?? 0) + cashPart);
+    person.socioeconomic.wealth = computeSocioeconomicWealth(person.socioeconomic);
+  }
+  policyState.lastRedistributed = Number(pool.toFixed(6));
+  policyState.redistributionPool = 0;
 }
 
 function simulateCompanyInvestments({ people, companies, world, rng, phase }) {
@@ -4930,14 +5288,21 @@ function pickEmployer(person, cityCompanies, rng, world) {
   const climate = world.systemState?.climateStress ?? 0;
   const shockPenalty = 1 - (epidemic * 0.08 + climate * 0.05);
   for (const company of cityCompanies) {
+    ensureCompanyTypeState(company);
     const tenure = person.employmentHistory?.tenureByEmployer?.[company.id] ?? 0;
     const loyalty = Math.min(0.08, tenure * 0.004);
     const historyPenalty = person.employerId && person.employerId !== company.id ? 0.02 : 0;
+    const typeFit =
+      company.companyType === "IT"
+        ? (person.ability?.cognitive ?? 0.5) * 0.4 + (person.socioeconomic?.education ?? 0.5) * 0.35 + (person.traits?.discipline ?? 0.5) * 0.15 + (person.traits?.openness ?? 0.5) * 0.1
+        : company.companyType === "Military"
+          ? (person.traits?.discipline ?? 0.5) * 0.35 + (person.ability?.stressResilience ?? 0.5) * 0.3 + (person.ability?.health ?? 0.5) * 0.2 + (person.traits?.conformity ?? 0.5) * 0.15
+          : (person.ability?.productivity ?? 0.5) * 0.5 + (person.socioeconomic?.skill ?? 0.5) * 0.5;
     const score =
       company.efficiency * 0.4 +
       company.wageMultiplier * 0.35 +
       company.capital * 0.15 +
-      person.ability.productivity * 0.05 +
+      typeFit * 0.1 +
       loyalty -
       historyPenalty +
       rng.range(0, 0.1);
@@ -4958,9 +5323,14 @@ function computeCompanyOpenPositions({ cityCompanies, city, cityBaseCapacity, wo
   const shockPenalty = clamp(1 - (epidemic * 0.34 + climate * 0.22), 0.55, 1.08);
   let totalRaw = 0;
   for (const company of cityCompanies) {
+    ensureCompanyTypeState(company);
     const hiringMomentum = clamp((company.capital ?? 0) * 0.45 + Math.max(0, company.profit ?? 0) * 0.2 + (1 - (company.distress ?? 0)) * 0.35, 0.05, 1.6);
     const laborBias = company.rlPolicy?.lastAction === "labor_focus" ? 1.2 : company.rlPolicy?.lastAction === "margin_focus" ? 0.88 : 1;
-    const base = Math.max(0.15, (company.capacity ?? 0.5) * hiringMomentum * laborBias * shockPenalty);
+    const typeLaborBias =
+      company.companyType === "IT" ? 1.08
+      : company.companyType === "Military" ? 0.94
+      : 1;
+    const base = Math.max(0.15, (company.capacity ?? 0.5) * hiringMomentum * laborBias * typeLaborBias * shockPenalty);
     byCompany.set(company.id, base);
     totalRaw += base;
   }
@@ -4992,6 +5362,7 @@ function computeCompanySummary(companies, world) {
       name: c.name,
       cityId: c.cityId,
       sector: c.sector,
+      companyType: c.companyType ?? "General",
       listed: !!c.listed,
       employees: c.employeeCount,
       openingsPosted: c.openPositionsPosted ?? 0,
@@ -5014,11 +5385,73 @@ function computeCompanySummary(companies, world) {
       profit: Number(profit.toFixed(3))
     };
   });
+  const byType = ["General", "IT", "Military"].map((companyType) => {
+    const typeRows = rows.filter((r) => r.companyType === companyType);
+    const typeProfit = typeRows.reduce((sum, r) => sum + r.profit, 0);
+    return {
+      companyType,
+      count: typeRows.length,
+      profit: Number(typeProfit.toFixed(3))
+    };
+  });
+  const totalProfit = Math.max(0.0001, byType.reduce((sum, row) => sum + Math.max(0, row.profit), 0));
+  const byTypeWithShare = byType.map((row) => ({
+    ...row,
+    profitShare: Number(((Math.max(0, row.profit) / totalProfit) * 100).toFixed(2))
+  }));
+  const concentration = summarizeCompanyConcentration(companies);
+  const policyState = world?.systemState?.companyPolicy ?? {};
 
   return {
     totalCompanies: companies.length,
+    byType: byTypeWithShare,
+    concentration,
+    policy: {
+      effectiveAntitrust: Number((policyState.effectiveAntitrust ?? 0).toFixed(3)),
+      antitrustAutoBoost: Number((policyState.antitrustAutoBoost ?? 0).toFixed(3)),
+      redistributionPool: Number((policyState.redistributionPool ?? 0).toFixed(4)),
+      redistributedLastTick: Number((policyState.lastRedistributed ?? 0).toFixed(4))
+    },
     topCompanies: rows.slice(0, 8),
     byCity
+  };
+}
+
+function summarizeCompanyConcentration(companies) {
+  if (!Array.isArray(companies) || companies.length === 0) {
+    return { avgHHI: 0, maxHHI: 0, penalizedCompanies: 0, penalizedRatio: 0 };
+  }
+  const groups = new Map();
+  let penalized = 0;
+  for (const c of companies) {
+    ensureCompanyTypeState(c);
+    const key = `${c.cityId}|${c.companyType}`;
+    const arr = groups.get(key) ?? [];
+    arr.push(c);
+    groups.set(key, arr);
+    if ((c.concentrationPenalty ?? 1) < 0.999) {
+      penalized += 1;
+    }
+  }
+  let sum = 0;
+  let max = 0;
+  let n = 0;
+  for (const arr of groups.values()) {
+    const total = Math.max(0.0001, arr.reduce((acc, c) => acc + Math.max(0.0001, Number(c.capital ?? 0.1)), 0));
+    let hhi = 0;
+    for (const c of arr) {
+      const share = Math.max(0, Number(c.capital ?? 0)) / total;
+      hhi += share * share;
+    }
+    sum += hhi;
+    max = Math.max(max, hhi);
+    n += 1;
+  }
+  return {
+    avgHHI: Number((sum / Math.max(1, n)).toFixed(4)),
+    maxHHI: Number(max.toFixed(4)),
+    penalizedCompanies: penalized,
+    penalizedRatio: Number((penalized / Math.max(1, companies.length)).toFixed(4))
   };
 }
 

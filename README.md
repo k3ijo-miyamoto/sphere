@@ -2,6 +2,8 @@
 
 This repository now contains an initial implementation scaffold for the project vision in `Project Overview.md`.
 
+![Sphere World Overview](docs/img/world.png)
+
 ## Implemented
 
 - Deterministic simulation clock with daily phases.
@@ -56,6 +58,68 @@ This starts a stdio MCP server (`scripts/mcpServer.js`) that exposes tools to in
 - `sphere_rank_public_services`
 - `sphere_hud_snapshot`
 - `sphere_reset`
+
+## MCP Perspective (For Repository Readers)
+
+In this project, MCP is the **control plane** for the simulation.
+
+- Simulation core (`src/sim/engine.js`, `src/world/model.js`) evolves world state.
+- MCP server (`scripts/mcpServer.js`) exposes that state and control actions as tools.
+- Web viewer is the **visualization plane**; MCP is the **programmatic experiment plane**.
+
+Typical MCP workflow:
+
+1. Observe current state (`sphere_world_summary`, `sphere_hud_snapshot`).
+2. Intervene (`sphere_tick`, policy/scale changes, or `sphere_reset` with seed).
+3. Re-observe and compare (`sphere_geopolitics_report`, `sphere_stratification_report`, `sphere_company_financials`, etc.).
+4. Export evidence (`sphere_export_snapshot`) for reproducible analysis.
+
+Why this matters:
+
+- Deterministic experiments via seed/snapshot.
+- Same world can be analyzed from macro (HUD/reports) to micro (city/person/company).
+- AI agents can run repeatable hypothesis loops without depending on UI interaction.
+
+## Architecture 1-8 (System Map)
+
+This project can be read in the following 8 fixed layers:
+
+1. **Time Loop**
+   - Main tick orchestration in `src/sim/engine.js` (`SimulationEngine.tick`).
+   - Advances phase/time, runs all subsystem updates, and emits a frame.
+2. **Agent Behavior**
+   - Person state transitions and movement in `src/sim/population.js` (`resolveState`, `updateLocation`).
+   - Models `Home | Commute | Work | Leisure | Sleep`.
+3. **Employment / Income**
+   - Hiring, employer matching, and income dynamics in `applyEmploymentAndEconomy`.
+   - Includes regime/strain/policy coupling for employment probability.
+4. **Company Dynamics**
+   - Company lifecycle, P/L, valuation, dividends, ownership, and investments.
+   - Includes `General/IT/Military` type logic and concentration guardrails.
+5. **Resources / Macro**
+   - Resource cycles, macro shocks, and city metric propagation in `src/sim/cityDynamics.js`.
+   - Updates productivity, cost of living, instability, and city type drift.
+6. **Geopolitics**
+   - Diplomacy tension/status (`peace/crisis/war/alliance`) in `src/sim/geopolitics.js`.
+   - Includes border restrictions, territorial shifts, and nation policy levers.
+7. **Meta-Order (1-5 layers)**
+   - Governance stack from world-system to hegemonic networks in geopolitics state.
+   - Reported through frame geopolitics outputs and MCP tools.
+8. **Reinforcement Learning**
+   - RL policies for company/resource/diplomacy/secret-society/investment decisions.
+   - Uses epsilon-greedy action selection with Q-value updates.
+
+```mermaid
+flowchart TD
+  A1[1. Time Loop<br/>SimulationEngine.tick] --> A2[2. Agent Behavior<br/>resolveState/updateLocation]
+  A2 --> A3[3. Employment / Income<br/>applyEmploymentAndEconomy]
+  A3 --> A4[4. Company Dynamics<br/>P/L valuation dividends investments]
+  A4 --> A5[5. Resources / Macro<br/>updateCityDynamics]
+  A5 --> A6[6. Geopolitics<br/>updateGeopolitics]
+  A6 --> A7[7. Meta-Order 1-5<br/>blocs/zones/hegemony]
+  A7 --> A8[8. Reinforcement Learning<br/>company/resource/diplomacy/etc]
+  A8 --> A1
+```
 
 ### MCP Client Config
 

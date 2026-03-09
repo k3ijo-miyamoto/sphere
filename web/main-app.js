@@ -68,11 +68,19 @@ const timelineUi = {
   range: document.getElementById("tl-range"),
   status: document.getElementById("tl-status")
 };
+const languageUi = {
+  switch: document.getElementById("language-switch")
+};
 const audioUi = {
   toggle: document.getElementById("bgm-toggle")
 };
 const snapshotUi = {
   saveNow: document.getElementById("snapshot-save-now")
+};
+const channelUi = {
+  diplomacy: document.getElementById("toggle-channel-diplomacy"),
+  institutional: document.getElementById("toggle-channel-institutional"),
+  shadow: document.getElementById("toggle-channel-shadow")
 };
 const scaleUi = {
   preset: document.getElementById("scale-preset"),
@@ -101,6 +109,7 @@ const hud = {
   week: document.getElementById("week"),
   perf: document.getElementById("perf"),
   flow: document.getElementById("flow"),
+  layer0Trails: document.getElementById("layer0-trails"),
   humanLod: document.getElementById("human-lod"),
   nameLabels: document.getElementById("name-labels"),
   states: document.getElementById("states"),
@@ -118,6 +127,7 @@ const hud = {
   nations: document.getElementById("nations"),
   metaOrder: document.getElementById("meta-order"),
   diplomacy: document.getElementById("diplomacy"),
+  channelLines: document.getElementById("channel-lines"),
   alliances: document.getElementById("alliances"),
   hostilities: document.getElementById("hostilities"),
   military: document.getElementById("military"),
@@ -141,6 +151,328 @@ const SCALE_PRESETS = {
   large: { trackedIndividuals: 3000, activeDetailCount: 120 },
   xlarge: { trackedIndividuals: 5000, activeDetailCount: 180 }
 };
+
+const I18N = {
+  ja: {
+    "label.time": "時刻",
+    "label.phase": "フェーズ",
+    "label.weekly": "週次",
+    "label.performance": "性能",
+    "label.flow": "フロー",
+    "label.layer0Trails": "Layer0トレイル",
+    "label.humanLod": "人LOD",
+    "label.nameLabels": "氏名表示(N)",
+    "label.states": "状態",
+    "label.nightEncounters": "夜間交流",
+    "label.focusCities": "フォーカス都市",
+    "label.religionDistribution": "宗教分布",
+    "label.religionInfluence": "宗教影響力",
+    "label.religionDoctrine": "宗教信条",
+    "label.birthDeathGlobal": "出生/死亡(全体)",
+    "label.birthDeathCity": "出生/死亡(都市別)",
+    "label.economySummary": "経済サマリ",
+    "label.companyTop": "企業トップ",
+    "label.companyByCity": "企業(都市別)",
+    "label.macroSystem": "マクロ(疫病/気候/文化/市場)",
+    "label.nations": "国家",
+    "label.metaOrder": "秩序レイヤ",
+    "label.diplomacy": "外交",
+    "label.channelLines": "上層チャネル線",
+    "label.alliances": "同盟関係",
+    "label.hostilities": "敵対関係",
+    "label.military": "軍事企業",
+    "label.events": "イベント",
+    "label.nationEvents": "国家イベント",
+    "label.history": "履歴",
+    "label.lineageSummary": "家系サマリ",
+    "label.topEcon": "経済力トップ",
+    "label.topCog": "知能トップ",
+    "label.topSoc": "社交性トップ",
+    "label.topGene": "遺伝子潜在トップ",
+    "label.topEpi": "エピ変動トップ",
+    "label.geneDiversity": "遺伝多様性",
+    "legend.cityNode": "都市ノード",
+    "legend.city3d": "都市構造(3D)",
+    "legend.cityLodDetail": "近景で詳細都市LOD",
+    "legend.humanFar": "人LOD Far(密度)",
+    "legend.humanMid": "人LOD Mid(ビルボード)",
+    "legend.humanNear": "人LOD Near(低ポリ)",
+    "legend.pedestrian": "歩行者(近景)",
+    "legend.flowParticles": "フロー粒子",
+    "legend.sphereLayer": "球レイヤー",
+    "legend.cityResidential": "居住都市",
+    "legend.cityWorkHub": "仕事都市",
+    "legend.cityMixed": "混合都市",
+    "legend.stateWork": "人: Work",
+    "legend.stateCommute": "人: Commute",
+    "legend.stateLeisure": "人: Leisure",
+    "legend.layer0Trail": "Layer0イベントトレイル",
+    "legend.epidemicAura": "疫病オーラ",
+    "legend.disasterStress": "自然災害ストレス",
+    "legend.eventPulse": "イベントパルス",
+    "legend.nationTerritory": "国家領土(透過)",
+    "legend.channelDiplomacy": "外交チャンネル(上層間)",
+    "legend.channelInstitutional": "制度圏チャンネル(Bloc)",
+    "legend.channelShadow": "非公式上層チャンネル(Shadow)",
+    "legend.cityCommunity": "都市間コミュニティネットワーク",
+    "legend.channelTitle": "上層チャネル表示",
+    "legend.channelDiplomacyShort": "外交",
+    "legend.channelInstitutionalShort": "制度圏",
+    "legend.channelShadowShort": "非公式上層",
+    "label.language": "言語",
+    "label.scale": "Scale",
+    "insight.population": "現在人口",
+    "insight.cityNews": "都市ニュース",
+    "insight.stock": "企業株価",
+    "insight.phase": "位相遷移",
+    "timeline.live": "Live",
+    "timeline.play": "Play",
+    "timeline.pause": "Pause",
+    "timeline.speed": "Speed",
+    "button.saveSnapshot": "スナップショット保存",
+    "common.show": "表示",
+    "common.hide": "非表示",
+    "common.on": "ON",
+    "common.off": "OFF",
+    "common.none": "なし",
+    "common.noChange": "変化なし",
+    "common.noNews": "ニュースなし",
+    "common.noCompanyData": "企業データなし",
+    "common.people": "人",
+    "common.layers": "層",
+    "hud.weekend": "週末",
+    "hud.timeline": "Timeline",
+    "hud.active": "active",
+    "hud.spawned": "spawned",
+    "hud.channel.diplomacy": "外交",
+    "hud.channel.institutional": "制度圏",
+    "hud.channel.shadow": "非公式",
+    "hud.channel.community": "コミュニティ",
+    "hud.births": "出生",
+    "hud.deaths": "死亡",
+    "hud.war": "戦",
+    "hud.marriages": "婚姻",
+    "hud.divorces": "離婚",
+    "hud.cohab": "同居",
+    "hud.net": "純増",
+    "hud.avgIncome": "平均所得",
+    "hud.unemployment": "失業率",
+    "hud.top": "最高",
+    "hud.profitShort": "利",
+    "hud.stockShort": "株",
+    "hud.companiesSuffix": "社",
+    "hud.founded": "建国",
+    "hud.territoryShift": "領土変化",
+    "hud.extinct": "消滅",
+    "hud.latest": "最新",
+    "hud.trackedPopulation": "追跡人口",
+    "hud.estimatedPopulation": "推定総人口",
+    "hud.estimated": "推定",
+    "hud.macro.epi": "疫",
+    "hud.macro.cli": "気",
+    "hud.macro.cul": "文",
+    "hud.macro.mar": "市",
+    "hud.power": "力",
+    "hud.trustShort": "信",
+    "hud.tradeShort": "交",
+    "hud.valueShort": "価",
+    "hud.readiness": "準備",
+    "hud.defenseBudgetAvg": "防衛予算平均",
+    "hud.warContractShare": "戦時契約比率",
+    "hud.companyTypes": "企業型",
+    "hud.hhi": "HHI",
+    "hud.lineage.none": "家系データなし",
+    "hud.market.na": "MARKET: N/A"
+  },
+  en: {
+    "label.time": "Time",
+    "label.phase": "Phase",
+    "label.weekly": "Week",
+    "label.performance": "Performance",
+    "label.flow": "Flow",
+    "label.layer0Trails": "Layer0 Trails",
+    "label.humanLod": "Human LOD",
+    "label.nameLabels": "Name Labels (N)",
+    "label.states": "States",
+    "label.nightEncounters": "Night Encounters",
+    "label.focusCities": "Focus Cities",
+    "label.religionDistribution": "Religion Distribution",
+    "label.religionInfluence": "Religion Influence",
+    "label.religionDoctrine": "Religion Doctrine",
+    "label.birthDeathGlobal": "Birth/Death (Global)",
+    "label.birthDeathCity": "Birth/Death (By City)",
+    "label.economySummary": "Economy Summary",
+    "label.companyTop": "Top Companies",
+    "label.companyByCity": "Companies (By City)",
+    "label.macroSystem": "Macro (Epi/Climate/Culture/Market)",
+    "label.nations": "Nations",
+    "label.metaOrder": "Meta Order",
+    "label.diplomacy": "Diplomacy",
+    "label.channelLines": "Upper Channel Lines",
+    "label.alliances": "Alliances",
+    "label.hostilities": "Hostilities",
+    "label.military": "Military Companies",
+    "label.events": "Events",
+    "label.nationEvents": "Nation Events",
+    "label.history": "History",
+    "label.lineageSummary": "Lineage Summary",
+    "label.topEcon": "Top Economic",
+    "label.topCog": "Top Cognitive",
+    "label.topSoc": "Top Sociability",
+    "label.topGene": "Top Genetic Potential",
+    "label.topEpi": "Top Epigenetic Shift",
+    "label.geneDiversity": "Genetic Diversity",
+    "legend.cityNode": "City Node",
+    "legend.city3d": "City Structure (3D)",
+    "legend.cityLodDetail": "Detailed City LOD (Near)",
+    "legend.humanFar": "Human LOD Far (Density)",
+    "legend.humanMid": "Human LOD Mid (Billboard)",
+    "legend.humanNear": "Human LOD Near (Low Poly)",
+    "legend.pedestrian": "Pedestrians (Near)",
+    "legend.flowParticles": "Flow Particles",
+    "legend.sphereLayer": "Sphere Layers",
+    "legend.cityResidential": "Residential City",
+    "legend.cityWorkHub": "WorkHub City",
+    "legend.cityMixed": "Mixed City",
+    "legend.stateWork": "Person: Work",
+    "legend.stateCommute": "Person: Commute",
+    "legend.stateLeisure": "Person: Leisure",
+    "legend.layer0Trail": "Layer0 Event Trails",
+    "legend.epidemicAura": "Epidemic Aura",
+    "legend.disasterStress": "Disaster Stress",
+    "legend.eventPulse": "Event Pulse",
+    "legend.nationTerritory": "Nation Territory (Transparent)",
+    "legend.channelDiplomacy": "Diplomacy Channel (Upper)",
+    "legend.channelInstitutional": "Institutional Channel (Bloc)",
+    "legend.channelShadow": "Shadow Channel (Upper)",
+    "legend.cityCommunity": "Inter-city Community Network",
+    "legend.channelTitle": "Upper Channel Visibility",
+    "legend.channelDiplomacyShort": "Diplomacy",
+    "legend.channelInstitutionalShort": "Institutional",
+    "legend.channelShadowShort": "Shadow",
+    "label.language": "Language",
+    "label.scale": "Scale",
+    "insight.population": "Population",
+    "insight.cityNews": "City News",
+    "insight.stock": "Stock Market",
+    "insight.phase": "Phase Shift",
+    "timeline.live": "Live",
+    "timeline.play": "Play",
+    "timeline.pause": "Pause",
+    "timeline.speed": "Speed",
+    "button.saveSnapshot": "Save Snapshot",
+    "common.show": "Show",
+    "common.hide": "Hide",
+    "common.on": "ON",
+    "common.off": "OFF",
+    "common.none": "None",
+    "common.noChange": "No change",
+    "common.noNews": "No news",
+    "common.noCompanyData": "No company data",
+    "common.people": "",
+    "common.layers": "layers",
+    "hud.weekend": "Weekend",
+    "hud.timeline": "Timeline",
+    "hud.active": "active",
+    "hud.spawned": "spawned",
+    "hud.channel.diplomacy": "Diplomacy",
+    "hud.channel.institutional": "Institutional",
+    "hud.channel.shadow": "Shadow",
+    "hud.channel.community": "Community",
+    "hud.births": "Births",
+    "hud.deaths": "Deaths",
+    "hud.war": "War",
+    "hud.marriages": "Marriages",
+    "hud.divorces": "Divorces",
+    "hud.cohab": "Cohab",
+    "hud.net": "Net",
+    "hud.avgIncome": "Avg income",
+    "hud.unemployment": "Unemployment",
+    "hud.top": "Top",
+    "hud.profitShort": "P",
+    "hud.stockShort": "S",
+    "hud.companiesSuffix": "co",
+    "hud.founded": "Founded",
+    "hud.territoryShift": "Territory shift",
+    "hud.extinct": "Extinct",
+    "hud.latest": "Latest",
+    "hud.trackedPopulation": "Tracked",
+    "hud.estimatedPopulation": "Estimated total",
+    "hud.estimated": "Est",
+    "hud.macro.epi": "Epi",
+    "hud.macro.cli": "Cli",
+    "hud.macro.cul": "Cul",
+    "hud.macro.mar": "Mkt",
+    "hud.power": "Power",
+    "hud.trustShort": "Trust",
+    "hud.tradeShort": "Trade",
+    "hud.valueShort": "Value",
+    "hud.readiness": "Readiness",
+    "hud.defenseBudgetAvg": "Defense budget avg",
+    "hud.warContractShare": "War contract share",
+    "hud.companyTypes": "Types",
+    "hud.hhi": "HHI",
+    "hud.lineage.none": "No lineage data",
+    "hud.market.na": "MARKET: N/A"
+  }
+};
+
+let currentLang = localStorage.getItem("sphere_lang") === "en" ? "en" : "ja";
+const EN_TEXT_REPLACEMENTS = [
+  [/規模トップ/g, "Top Size"],
+  [/資産トップ/g, "Top Assets"],
+  [/権力トップ/g, "Top Power"],
+  [/規模:/g, "Size:"],
+  [/資産:/g, "Assets:"],
+  [/権力:/g, "Power:"],
+  [/が覇権ネットワークで主導権を拡大/g, " expanded dominance in the hegemonic network"],
+  [/の外交緊張が上昇/g, " diplomatic tensions rose"],
+  [/で武力衝突/g, " armed clash erupted"],
+  [/が国境工作を実行/g, " conducted border operations"],
+  [/が建国/g, " was founded"],
+  [/を首都に建国/g, " was founded with the capital at"],
+  [/国境工作/g, "border operation"],
+  [/外交緊張/g, "diplomatic tension"],
+  [/武力衝突/g, "armed clash"],
+  [/共同規範を重視/g, "Emphasis on shared norms"],
+  [/相互扶助/g, "Mutual aid"],
+  [/流動性/g, "Fluidity"],
+  [/調和を重視/g, "Emphasis on harmony"],
+  [/挑戦を重視/g, "Emphasis on challenge"],
+  [/多様性/g, "Diversity"],
+  [/勤勉/g, "Diligence"],
+  [/自律/g, "Autonomy"],
+  [/ と /g, " and "],
+  [/・/g, ", "]
+];
+
+function t(key) {
+  return I18N[currentLang]?.[key] ?? I18N.ja[key] ?? key;
+}
+
+function localizeGeneratedText(value) {
+  const text = String(value ?? "");
+  if (currentLang !== "en" || !text) {
+    return text;
+  }
+  let out = text;
+  for (const [pattern, replacement] of EN_TEXT_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
+function applyStaticI18n() {
+  document.documentElement.lang = currentLang;
+  const nodes = document.querySelectorAll("[data-i18n]");
+  for (const node of nodes) {
+    const key = node.getAttribute("data-i18n");
+    if (!key) {
+      continue;
+    }
+    node.textContent = t(key);
+  }
+}
 
 function cloneConfig(config) {
   return JSON.parse(JSON.stringify(config));
@@ -285,6 +617,9 @@ const phaseVizState = {
   macroRegime: "stable",
   socialRegime: "stable"
 };
+const channelOverlayStats = { diplomacy: 0, institutional: 0, shadow: 0, community: 0 };
+const channelOverlayVisibility = { diplomacy: true, institutional: true, shadow: true };
+const layer0TrailStats = { active: 0, spawned: 0 };
 const ambientAudio = {
   context: null,
   masterGain: null,
@@ -326,6 +661,7 @@ world.layers.forEach((layer, index) => {
 buildStars(scene);
 const layerMeshes = buildLayerMeshes(scene, world.layers, layerRadiusById);
 let cityObjects = buildCities(scene, world.cities, layerRadiusById);
+let cityBuoys = buildCityBuoys(scene, world.cities, layerRadiusById);
 let cityStructures = buildCityStructures(scene, world.cities, cityObjects);
 for (const [cityId, structure] of cityStructures) {
   const cityObj = cityObjects.get(cityId);
@@ -336,7 +672,8 @@ for (const [cityId, structure] of cityStructures) {
 let edgeObjects = buildEdges(scene, world.edges, cityObjects);
 let renderedWorldVersion = world.version;
 const eventFx = createEventFxRenderer(scene, cityObjects, baseRadius + layerStep * (world.layers.length + 1.1));
-const geopoliticsFx = createGeopoliticsOverlay(scene, cityObjects);
+const geopoliticsFx = createGeopoliticsOverlay(scene, cityObjects, cityBuoys);
+const layer0TrailFx = createLayer0TrailOverlay(scene, cityObjects);
 const nationTerritoryFx = createNationTerritoryOverlay(scene);
 rebuildNationTerritories(nationTerritoryFx, world, cityObjects, [...layerRadiusById.values()]);
 
@@ -436,6 +773,7 @@ function animate(now) {
   updateLayerRotation(layerMeshes, now * 0.001);
   updateEventFx(eventFx, frame, world, now * 0.001);
   updateGeopoliticsOverlay(geopoliticsFx, frame, world, now * 0.001);
+  updateLayer0TrailOverlay(layer0TrailFx, frame, world, now * 0.001, dt * 0.001);
   animateHumanLod(humanLodRenderer, now * 0.001);
   applyCameraMotion(now * 0.001, frame.phase);
 
@@ -461,6 +799,8 @@ setupInsightToggles();
 setupAmbientAudioControls();
 setupScaleControls();
 setupSnapshotControls();
+setupLanguageControls();
+setupChannelControls();
 applyQualityLevel(0);
 
 window.addEventListener("resize", () => {
@@ -530,8 +870,8 @@ function setupTimelineControls() {
       clearInterval(timelineTimer);
       timelineTimer = null;
     }
-    timelineUi.play.textContent = "Play";
-    timelineUi.status.textContent = "Live";
+    timelineUi.play.textContent = t("timeline.play");
+    timelineUi.status.textContent = t("timeline.live");
   });
   timelineUi.prev?.addEventListener("click", () => {
     timelineMode = true;
@@ -544,7 +884,7 @@ function setupTimelineControls() {
   timelineUi.play?.addEventListener("click", () => {
     timelineMode = true;
     timelinePlaying = !timelinePlaying;
-    timelineUi.play.textContent = timelinePlaying ? "Pause" : "Play";
+    timelineUi.play.textContent = timelinePlaying ? t("timeline.pause") : t("timeline.play");
     if (!timelinePlaying) {
       if (timelineTimer) {
         clearInterval(timelineTimer);
@@ -577,23 +917,81 @@ function setupInsightToggles() {
   insightUi.togglePopulation?.addEventListener("click", () => {
     panelVisible.population = !panelVisible.population;
     insightUi.populationBoard.style.display = panelVisible.population ? "block" : "none";
-    insightUi.togglePopulation.textContent = panelVisible.population ? "Hide" : "Show";
+    insightUi.togglePopulation.textContent = panelVisible.population ? t("common.hide") : t("common.show");
   });
   insightUi.toggleCityNews?.addEventListener("click", () => {
     panelVisible.cityNews = !panelVisible.cityNews;
     insightUi.cityNewsBoard.style.display = panelVisible.cityNews ? "block" : "none";
-    insightUi.toggleCityNews.textContent = panelVisible.cityNews ? "Hide" : "Show";
+    insightUi.toggleCityNews.textContent = panelVisible.cityNews ? t("common.hide") : t("common.show");
   });
   insightUi.toggleStock?.addEventListener("click", () => {
     panelVisible.stock = !panelVisible.stock;
     insightUi.stockBoard.style.display = panelVisible.stock ? "block" : "none";
-    insightUi.toggleStock.textContent = panelVisible.stock ? "Hide" : "Show";
+    insightUi.toggleStock.textContent = panelVisible.stock ? t("common.hide") : t("common.show");
   });
   insightUi.togglePhase?.addEventListener("click", () => {
     panelVisible.phase = !panelVisible.phase;
     insightUi.phaseBoard.style.display = panelVisible.phase ? "block" : "none";
-    insightUi.togglePhase.textContent = panelVisible.phase ? "Hide" : "Show";
+    insightUi.togglePhase.textContent = panelVisible.phase ? t("common.hide") : t("common.show");
   });
+}
+
+function refreshLocalizedUiText() {
+  if (audioUi.toggle) {
+    audioUi.toggle.textContent = `BGM: ${ambientAudio.running ? t("common.on") : t("common.off")}`;
+  }
+  if (scaleUi.autoLodToggle) {
+    scaleUi.autoLodToggle.textContent = `AutoLOD: ${runtimeTuning.autoLod ? t("common.on") : t("common.off")}`;
+  }
+  if (insightUi.togglePopulation) {
+    insightUi.togglePopulation.textContent = panelVisible.population ? t("common.hide") : t("common.show");
+  }
+  if (insightUi.toggleCityNews) {
+    insightUi.toggleCityNews.textContent = panelVisible.cityNews ? t("common.hide") : t("common.show");
+  }
+  if (insightUi.toggleStock) {
+    insightUi.toggleStock.textContent = panelVisible.stock ? t("common.hide") : t("common.show");
+  }
+  if (insightUi.togglePhase) {
+    insightUi.togglePhase.textContent = panelVisible.phase ? t("common.hide") : t("common.show");
+  }
+  if (timelineUi.play) {
+    timelineUi.play.textContent = timelinePlaying ? t("timeline.pause") : t("timeline.play");
+  }
+  if (timelineUi.status && !timelineMode) {
+    timelineUi.status.textContent = t("timeline.live");
+  }
+}
+
+function setupLanguageControls() {
+  if (languageUi.switch) {
+    languageUi.switch.value = currentLang;
+    languageUi.switch.addEventListener("change", () => {
+      currentLang = languageUi.switch.value === "en" ? "en" : "ja";
+      localStorage.setItem("sphere_lang", currentLang);
+      applyStaticI18n();
+      refreshLocalizedUiText();
+      ensurePhaseBoardUi();
+      updateHud(frame, world);
+    });
+  }
+  applyStaticI18n();
+  refreshLocalizedUiText();
+}
+
+function setupChannelControls() {
+  const bind = (key, el) => {
+    if (!el) return;
+    channelOverlayVisibility[key] = el.checked !== false;
+    el.addEventListener("change", () => {
+      channelOverlayVisibility[key] = el.checked !== false;
+      applyChannelOverlayVisibility(geopoliticsFx);
+    });
+  };
+  bind("diplomacy", channelUi.diplomacy);
+  bind("institutional", channelUi.institutional);
+  bind("shadow", channelUi.shadow);
+  applyChannelOverlayVisibility(geopoliticsFx);
 }
 
 function setupAmbientAudioControls() {
@@ -627,7 +1025,7 @@ async function startAmbientAudio(phase) {
   ambientAudio.running = true;
   updateAmbientAudioForPhase(phase);
   if (audioUi.toggle) {
-    audioUi.toggle.textContent = "BGM: ON";
+    audioUi.toggle.textContent = `BGM: ${t("common.on")}`;
   }
 }
 
@@ -641,7 +1039,7 @@ function stopAmbientAudio(force = false) {
   ambientAudio.masterGain.gain.linearRampToValueAtTime(0, t + (force ? 0.05 : 0.9));
   ambientAudio.running = false;
   if (audioUi.toggle) {
-    audioUi.toggle.textContent = "BGM: OFF";
+    audioUi.toggle.textContent = `BGM: ${t("common.off")}`;
   }
 }
 
@@ -753,10 +1151,10 @@ function setupScaleControls() {
     });
   }
   if (scaleUi.autoLodToggle) {
-    scaleUi.autoLodToggle.textContent = `AutoLOD: ${runtimeTuning.autoLod ? "ON" : "OFF"}`;
+    scaleUi.autoLodToggle.textContent = `AutoLOD: ${runtimeTuning.autoLod ? t("common.on") : t("common.off")}`;
     scaleUi.autoLodToggle.addEventListener("click", () => {
       runtimeTuning.autoLod = !runtimeTuning.autoLod;
-      scaleUi.autoLodToggle.textContent = `AutoLOD: ${runtimeTuning.autoLod ? "ON" : "OFF"}`;
+      scaleUi.autoLodToggle.textContent = `AutoLOD: ${runtimeTuning.autoLod ? t("common.on") : t("common.off")}`;
     });
   }
 }
@@ -848,12 +1246,18 @@ function updatePerformanceMetrics(dtMs, simMs, renderMs) {
 }
 
 function ensureStockBoardUi() {
-  if (!insightUi.stockBoard || insightUi.stockCanvas) {
+  if (!insightUi.stockBoard) {
+    return;
+  }
+  if (insightUi.stockCanvas) {
+    if (!stockVizState.indexHistory.length && insightUi.stockSummary) {
+      insightUi.stockSummary.textContent = t("hud.market.na");
+    }
     return;
   }
   insightUi.stockBoard.classList.add("stock-market-board");
   insightUi.stockBoard.innerHTML = `
-    <div id="stock-summary" class="stock-summary">MARKET: -</div>
+    <div id="stock-summary" class="stock-summary">${t("hud.market.na")}</div>
     <canvas id="stock-index-chart" class="stock-index-chart" width="640" height="230"></canvas>
     <div id="stock-tape" class="stock-tape"></div>
     <div id="stock-table" class="stock-table"></div>
@@ -865,7 +1269,16 @@ function ensureStockBoardUi() {
 }
 
 function ensurePhaseBoardUi() {
-  if (!insightUi.phaseBoard || insightUi.phaseCanvas) {
+  if (!insightUi.phaseBoard) {
+    return;
+  }
+  if (insightUi.phaseCanvas) {
+    if (insightUi.phaseLegend) {
+      const spans = insightUi.phaseLegend.querySelectorAll("span");
+      if (spans[0]) spans[0].textContent = currentLang === "en" ? "Shock" : "ショック";
+      if (spans[1]) spans[1].textContent = currentLang === "en" ? "Recovery" : "回復";
+      if (spans[2]) spans[2].textContent = currentLang === "en" ? "Instability" : "不安定";
+    }
     return;
   }
   insightUi.phaseBoard.classList.add("phase-board");
@@ -873,9 +1286,9 @@ function ensurePhaseBoardUi() {
     <div id="phase-summary" class="phase-summary">Macro: - / Social: -</div>
     <canvas id="phase-chart" class="phase-chart" width="640" height="180"></canvas>
     <div id="phase-legend" class="phase-legend">
-      <span style="color:#ffad7a;">Shock</span>
-      <span style="color:#7bc8ff;">Recovery</span>
-      <span style="color:#ffd37f;">Instability</span>
+      <span style="color:#ffad7a;">${currentLang === "en" ? "Shock" : "ショック"}</span>
+      <span style="color:#7bc8ff;">${currentLang === "en" ? "Recovery" : "回復"}</span>
+      <span style="color:#ffd37f;">${currentLang === "en" ? "Instability" : "不安定"}</span>
     </div>
   `;
   insightUi.phaseCanvas = document.getElementById("phase-chart");
@@ -947,6 +1360,18 @@ function buildCities(targetScene, cities, radiusMap) {
   return byCityId;
 }
 
+function buildCityBuoys(targetScene, cities, radiusMap) {
+  const byLayer = {
+    Layer1: new Map(),
+    Layer2: new Map()
+  };
+  const buoyGeo = new THREE.SphereGeometry(0.04, 10, 10);
+  for (const city of cities) {
+    addCityBuoyVisual(targetScene, byLayer, city, radiusMap, buoyGeo);
+  }
+  return byLayer;
+}
+
 function buildEdges(targetScene, edges, cityObjects) {
   const byEdgeId = new Map();
 
@@ -970,6 +1395,7 @@ function syncWorldVisualsIfNeeded(simFrame) {
   for (const city of world.cities) {
     if (!cityObjects.has(city.id)) {
       addCityVisual(scene, cityObjects, city, layerRadiusById, cityGeo);
+      addCityBuoyVisual(scene, cityBuoys, city, layerRadiusById, new THREE.SphereGeometry(0.04, 10, 10));
       const structureMap = buildCityStructures(scene, [city], cityObjects);
       for (const [cityId, structure] of structureMap) {
         cityStructures.set(cityId, structure);
@@ -986,6 +1412,12 @@ function syncWorldVisualsIfNeeded(simFrame) {
       cityObj.label.visible = false;
       if (cityObj.structure) {
         cityObj.structure.root.visible = false;
+      }
+      for (const layerId of ["Layer1", "Layer2"]) {
+        const buoy = cityBuoys?.[layerId]?.get(cityId);
+        if (buoy) {
+          buoy.mesh.visible = false;
+        }
       }
     }
   }
@@ -1201,13 +1633,17 @@ function createPulseTexture() {
   return tex;
 }
 
-function createGeopoliticsOverlay(targetScene, cityObjects) {
+function createGeopoliticsOverlay(targetScene, cityObjects, cityBuoys) {
   const group = new THREE.Group();
   targetScene.add(group);
   return {
     group,
     cityObjects,
-    lines: new Map()
+    cityBuoys,
+    diplomacyLines: new Map(),
+    institutionalLines: new Map(),
+    shadowLines: new Map(),
+    communityLines: new Map()
   };
 }
 
@@ -1217,32 +1653,31 @@ function updateGeopoliticsOverlay(overlay, simFrame, simWorld, elapsedSec) {
   }
   const relations = simFrame.geopolitics.relations ?? [];
   const nations = simFrame.geopolitics.nations ?? [];
+  const geoState = simFrame.system?.geopolitics ?? simWorld?.systemState?.geopolitics ?? {};
   const nationById = new Map(nations.map((n) => [n.id, n]));
-  const active = new Set();
+  const activeDiplomacy = new Set();
+  const activeInstitutional = new Set();
+  const activeShadow = new Set();
+  const activeCommunity = new Set();
 
-  for (const rel of relations) {
-    const key = `${rel.nationAId}|${rel.nationBId}`;
-    active.add(key);
-    let lineObj = overlay.lines.get(key);
-    if (!lineObj) {
-      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-      const mat = new THREE.LineBasicMaterial({ color: 0x9bbdff, transparent: true, opacity: 0.2 });
-      const line = new THREE.Line(geo, mat);
-      overlay.group.add(line);
-      lineObj = { line, material: mat };
-      overlay.lines.set(key, lineObj);
-    }
+  const focusRelations = relations
+    .slice()
+    .sort((a, b) => (b.tension ?? 0) - (a.tension ?? 0))
+    .slice(0, 8);
+  for (const rel of focusRelations) {
+    const key = `D|${rel.nationAId}|${rel.nationBId}`;
+    activeDiplomacy.add(key);
+    const lineObj = ensureOverlayLine(overlay.group, overlay.diplomacyLines, key, 0x52c7ff);
 
     const na = nationById.get(rel.nationAId);
     const nb = nationById.get(rel.nationBId);
-    const ca = na?.capitalCityId ? overlay.cityObjects.get(na.capitalCityId) : null;
-    const cb = nb?.capitalCityId ? overlay.cityObjects.get(nb.capitalCityId) : null;
+    const ca = getNationAnchor(overlay, na?.capitalCityId, "Layer2");
+    const cb = getNationAnchor(overlay, nb?.capitalCityId, "Layer2");
     if (!ca || !cb) {
       lineObj.line.visible = false;
       continue;
     }
-    const curve = makeArc(ca.position, cb.position, 0.95);
-    const points = curve.getPoints(28);
+    const points = makeSurfaceArcPoints(ca.position, cb.position, 32, 1.003);
     lineObj.line.geometry.setFromPoints(points);
     lineObj.line.visible = true;
 
@@ -1251,14 +1686,331 @@ function updateGeopoliticsOverlay(overlay, simFrame, simWorld, elapsedSec) {
     lineObj.material.opacity = style.opacity;
   }
 
-  for (const [key, row] of overlay.lines.entries()) {
-    if (!active.has(key)) {
-      row.line.geometry.dispose();
-      row.material.dispose();
-      overlay.group.remove(row.line);
-      overlay.lines.delete(key);
+  const blocMembership = geoState?.blocMembership ?? {};
+  const byBloc = new Map();
+  for (const [nationId, blocId] of Object.entries(blocMembership)) {
+    const arr = byBloc.get(blocId) ?? [];
+    arr.push(nationId);
+    byBloc.set(blocId, arr);
+  }
+  if (byBloc.size === 0) {
+    const all = [...nationById.keys()];
+    const fallbackGroups = [all.filter((_, i) => i % 3 === 0), all.filter((_, i) => i % 3 === 1), all.filter((_, i) => i % 3 === 2)];
+    fallbackGroups.forEach((members, idx) => {
+      if (members.length >= 2) {
+        byBloc.set(`FB${idx + 1}`, members);
+      }
+    });
+  }
+  for (const [blocId, membersRaw] of byBloc.entries()) {
+    const members = membersRaw.filter((id) => nationById.has(id));
+    if (members.length < 2) {
+      continue;
+    }
+    const anchor = members[0];
+    for (let i = 1; i < members.length; i += 1) {
+      const a = anchor;
+      const b = members[i];
+      const key = `I|${blocId}|${a}|${b}`;
+      activeInstitutional.add(key);
+      const lineObj = ensureOverlayLine(overlay.group, overlay.institutionalLines, key, 0x54ff9d);
+      const na = nationById.get(a);
+      const nb = nationById.get(b);
+    const ca = getNationAnchor(overlay, na?.capitalCityId, "Layer2");
+    const cb = getNationAnchor(overlay, nb?.capitalCityId, "Layer2");
+      if (!ca || !cb) {
+        lineObj.line.visible = false;
+        continue;
+      }
+      const points = makeSurfaceArcPoints(ca.position, cb.position, 32, 1.006);
+      lineObj.line.geometry.setFromPoints(points);
+      lineObj.line.visible = true;
+      lineObj.material.color.setHex(0x54ff9d);
+      lineObj.material.opacity = 0.35 + Math.abs(Math.sin(elapsedSec * 1.8 + i * 0.2)) * 0.32;
     }
   }
+
+  const shadowRows = (simFrame.geopolitics.hegemonicNetworks ?? [])
+    .filter((row) => row.type === "shadow" && typeof row.scope === "string" && row.scope.startsWith("nation:"))
+    .map((row) => ({
+      nationId: row.scope.slice("nation:".length),
+      influence: Number(row.influence ?? 0)
+    }));
+  const shadowByNation = new Map();
+  for (const row of shadowRows) {
+    shadowByNation.set(row.nationId, (shadowByNation.get(row.nationId) ?? 0) + row.influence);
+  }
+  const shadowNations = [...shadowByNation.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  for (let i = 0; i < shadowNations.length; i += 1) {
+    for (let j = i + 1; j < shadowNations.length; j += 1) {
+      const [a, ia] = shadowNations[i];
+      const [b, ib] = shadowNations[j];
+      const key = `S|${a}|${b}`;
+      activeShadow.add(key);
+      const lineObj = ensureOverlayLine(overlay.group, overlay.shadowLines, key, 0xff5ef0);
+      const na = nationById.get(a);
+      const nb = nationById.get(b);
+      const ca = getNationAnchor(overlay, na?.capitalCityId, "Layer2");
+      const cb = getNationAnchor(overlay, nb?.capitalCityId, "Layer2");
+      if (!ca || !cb) {
+        lineObj.line.visible = false;
+        continue;
+      }
+      const points = makeSurfaceArcPoints(ca.position, cb.position, 30, 1.009);
+      lineObj.line.geometry.setFromPoints(points);
+      lineObj.line.visible = true;
+      const power = Math.min(1, (ia + ib) / 3);
+      lineObj.material.color.setHex(0xff5ef0);
+      lineObj.material.opacity = 0.34 + power * 0.35 + Math.abs(Math.sin(elapsedSec * 2.4 + i + j)) * 0.2;
+    }
+  }
+
+  const communityPairAgg = new Map();
+  const communities = simWorld?.communities ?? [];
+  for (const community of communities) {
+    const members = [...new Set((community.memberCityUids ?? []).filter((cityId) => getCityAnchor(overlay, cityId, "Layer1")))];
+    if (members.length < 2) {
+      continue;
+    }
+    const hub = members[0];
+    for (let i = 1; i < members.length; i += 1) {
+      const a = hub < members[i] ? hub : members[i];
+      const b = hub < members[i] ? members[i] : hub;
+      const key = `${a}|${b}`;
+      const row = communityPairAgg.get(key) ?? { a, b, weight: 0, count: 0 };
+      row.weight += Number(community.cohesion ?? 0.5);
+      row.count += 1;
+      communityPairAgg.set(key, row);
+    }
+  }
+  const communityPairs = [...communityPairAgg.values()]
+    .sort((x, y) => y.weight - x.weight || y.count - x.count)
+    .slice(0, 60);
+  for (const pair of communityPairs) {
+    const key = `C|${pair.a}|${pair.b}`;
+    activeCommunity.add(key);
+    const lineObj = ensureOverlayLine(overlay.group, overlay.communityLines, key, 0x35ffd7);
+    const ca = getCityAnchor(overlay, pair.a, "Layer1");
+    const cb = getCityAnchor(overlay, pair.b, "Layer1");
+    if (!ca || !cb) {
+      lineObj.line.visible = false;
+      continue;
+    }
+    const points = makeSurfaceArcPoints(ca.position, cb.position, 24, 1.004);
+    lineObj.line.geometry.setFromPoints(points);
+    lineObj.line.visible = true;
+    const intensity = Math.min(1, pair.weight / Math.max(1, pair.count * 0.9));
+    lineObj.material.color.setHex(0x35ffd7);
+    lineObj.material.opacity = 0.14 + intensity * 0.2 + Math.abs(Math.sin(elapsedSec * 1.7 + pair.count)) * 0.1;
+  }
+
+  pruneOverlayLines(overlay.group, overlay.diplomacyLines, activeDiplomacy);
+  pruneOverlayLines(overlay.group, overlay.institutionalLines, activeInstitutional);
+  pruneOverlayLines(overlay.group, overlay.shadowLines, activeShadow);
+  pruneOverlayLines(overlay.group, overlay.communityLines, activeCommunity);
+  channelOverlayStats.diplomacy = overlay.diplomacyLines.size;
+  channelOverlayStats.institutional = overlay.institutionalLines.size;
+  channelOverlayStats.shadow = overlay.shadowLines.size;
+  channelOverlayStats.community = overlay.communityLines.size;
+  applyChannelOverlayVisibility(overlay);
+}
+
+function ensureOverlayLine(group, lineMap, key, color) {
+  let lineObj = lineMap.get(key);
+  if (lineObj) {
+    return lineObj;
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.35,
+    depthTest: false,
+    depthWrite: false
+  });
+  const line = new THREE.Line(geo, mat);
+  line.renderOrder = 60;
+  group.add(line);
+  lineObj = { line, material: mat };
+  lineMap.set(key, lineObj);
+  return lineObj;
+}
+
+function getNationAnchor(overlay, cityId, layerId = "Layer2") {
+  if (!cityId) {
+    return null;
+  }
+  const buoy = overlay.cityBuoys?.[layerId]?.get(cityId);
+  if (buoy?.position) {
+    return buoy;
+  }
+  return overlay.cityObjects?.get(cityId) ?? null;
+}
+
+function getCityAnchor(overlay, cityId, layerId = "Layer1") {
+  if (!cityId) {
+    return null;
+  }
+  const buoy = overlay.cityBuoys?.[layerId]?.get(cityId);
+  if (buoy?.position) {
+    return buoy;
+  }
+  return overlay.cityObjects?.get(cityId) ?? null;
+}
+
+function pruneOverlayLines(group, lineMap, activeKeys) {
+  for (const [key, row] of lineMap.entries()) {
+    if (activeKeys.has(key)) {
+      continue;
+    }
+    row.line.geometry.dispose();
+    row.material.dispose();
+    group.remove(row.line);
+    lineMap.delete(key);
+  }
+}
+
+function applyChannelOverlayVisibility(overlay) {
+  if (!overlay) return;
+  const setVisible = (lineMap, visible) => {
+    for (const row of lineMap.values()) {
+      row.line.visible = row.line.visible && visible;
+      if (!visible) {
+        row.line.visible = false;
+      }
+    }
+  };
+  setVisible(overlay.diplomacyLines, channelOverlayVisibility.diplomacy);
+  setVisible(overlay.institutionalLines, channelOverlayVisibility.institutional);
+  setVisible(overlay.shadowLines, channelOverlayVisibility.shadow);
+}
+
+function createLayer0TrailOverlay(targetScene, cityObjects) {
+  const group = new THREE.Group();
+  targetScene.add(group);
+  return {
+    group,
+    cityObjects,
+    particles: [],
+    seen: new Set(),
+    seenQueue: [],
+    maxSeen: 5000,
+    maxParticles: 260
+  };
+}
+
+function updateLayer0TrailOverlay(overlay, simFrame, simWorld, elapsedSec, dtSec) {
+  if (!overlay || !simFrame?.people) {
+    return;
+  }
+  const actions = simFrame.people.actions?.recent ?? [];
+  const near = simFrame.people.nearIndividuals ?? [];
+  const cityByPerson = new Map(near.map((p) => [p.id, p.cityId]));
+  const relevant = actions.filter((a) => a && (a.type === "consume" || a.type === "share" || a.type === "persuade"));
+  let spawned = 0;
+  for (const action of relevant.slice(-120)) {
+    const key = `${action.type}|${action.actorId}|${action.targetId ?? "-"}|${action.infoId ?? "-"}|${action.day ?? "-"}|${action.phase ?? "-"}`;
+    if (overlay.seen.has(key)) {
+      continue;
+    }
+    overlay.seen.add(key);
+    overlay.seenQueue.push(key);
+    if (overlay.seenQueue.length > overlay.maxSeen) {
+      const old = overlay.seenQueue.shift();
+      if (old) overlay.seen.delete(old);
+    }
+    const sourceCityId = action.cityId ?? cityByPerson.get(action.actorId) ?? null;
+    const targetCityId =
+      action.type === "persuade"
+        ? cityByPerson.get(action.targetId) ?? pickNeighborCityId(simWorld, sourceCityId, action.actorId)
+        : pickNeighborCityId(simWorld, sourceCityId, action.actorId);
+    const fromObj = sourceCityId ? overlay.cityObjects.get(sourceCityId) : null;
+    const toObj = targetCityId ? overlay.cityObjects.get(targetCityId) : null;
+    if (!fromObj || !toObj) {
+      continue;
+    }
+    spawnLayer0TrailParticle(overlay, action.type, fromObj.position, toObj.position, elapsedSec);
+    spawned += 1;
+    if (overlay.particles.length >= overlay.maxParticles) {
+      break;
+    }
+  }
+
+  for (let i = overlay.particles.length - 1; i >= 0; i -= 1) {
+    const p = overlay.particles[i];
+    p.life += dtSec;
+    const t = THREE.MathUtils.clamp(p.life / p.maxLife, 0, 1);
+    const point = p.curve.getPoint(t);
+    p.mesh.position.copy(point);
+    p.mesh.material.opacity = Math.max(0, p.baseOpacity * (1 - t));
+    p.mesh.scale.setScalar(0.85 + (1 - t) * 0.35);
+    if (t >= 1) {
+      p.mesh.geometry.dispose();
+      p.mesh.material.dispose();
+      overlay.group.remove(p.mesh);
+      overlay.particles.splice(i, 1);
+    }
+  }
+  layer0TrailStats.active = overlay.particles.length;
+  layer0TrailStats.spawned = spawned;
+}
+
+function spawnLayer0TrailParticle(overlay, actionType, fromPos, toPos, elapsedSec) {
+  if (overlay.particles.length >= overlay.maxParticles) {
+    const old = overlay.particles.shift();
+    if (old) {
+      old.mesh.geometry.dispose();
+      old.mesh.material.dispose();
+      overlay.group.remove(old.mesh);
+    }
+  }
+  const color =
+    actionType === "consume" ? 0x8bd6ff
+    : actionType === "share" ? 0x5fffc8
+    : 0xffc06b;
+  const curve = new THREE.CatmullRomCurve3(makeSurfaceArcPoints(fromPos, toPos, 18, 1.002));
+  const geo = new THREE.SphereGeometry(0.03, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.72,
+    depthTest: false,
+    depthWrite: false
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = 62;
+  const phase = hashNoise(Math.floor((elapsedSec + fromPos.x + toPos.y) * 1000));
+  const maxLife = 0.7 + phase * 1.2;
+  mesh.position.copy(curve.getPoint(0));
+  overlay.group.add(mesh);
+  overlay.particles.push({
+    mesh,
+    curve,
+    life: 0,
+    maxLife,
+    baseOpacity: mat.opacity
+  });
+}
+
+function pickNeighborCityId(simWorld, cityId, seed = 1) {
+  if (!cityId || !simWorld?.edges?.length) {
+    return cityId;
+  }
+  const neighbors = [];
+  for (const edge of simWorld.edges) {
+    if (edge.fromCityId === cityId) {
+      neighbors.push(edge.toCityId);
+    } else if (edge.toCityId === cityId) {
+      neighbors.push(edge.fromCityId);
+    }
+  }
+  if (!neighbors.length) {
+    return cityId;
+  }
+  const idx = Math.floor(hashNoise(Number(seed) + neighbors.length * 0.77) * neighbors.length);
+  return neighbors[Math.max(0, Math.min(neighbors.length - 1, idx))];
 }
 
 function relationVisualStyle(rel, elapsedSec) {
@@ -1497,7 +2249,7 @@ function resolveNationControlAtPoint(point, sources) {
 }
 
 function addCityVisual(targetScene, byCityId, city, radiusMap, cityGeo) {
-  const radius = radiusMap.get(city.layerId) ?? baseRadius;
+  const radius = radiusMap.get("Layer0") ?? baseRadius;
   const pos = latLonToVec3(city.geo.lat, city.geo.lon, radius);
 
   const mat = new THREE.MeshStandardMaterial({
@@ -1516,6 +2268,27 @@ function addCityVisual(targetScene, byCityId, city, radiusMap, cityGeo) {
   targetScene.add(label);
 
   byCityId.set(city.id, { city, position: pos.clone(), mesh, label });
+}
+
+function addCityBuoyVisual(targetScene, buoyByLayer, city, radiusMap, buoyGeo) {
+  for (const layerId of ["Layer1", "Layer2"]) {
+    const map = buoyByLayer?.[layerId];
+    if (!map || map.has(city.id)) {
+      continue;
+    }
+    const radius = radiusMap.get(layerId) ?? baseRadius;
+    const pos = latLonToVec3(city.geo.lat, city.geo.lon, radius);
+    const color = layerId === "Layer2" ? 0xff8fe0 : 0x83ffd8;
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.66
+    });
+    const mesh = new THREE.Mesh(buoyGeo, mat);
+    mesh.position.copy(pos);
+    targetScene.add(mesh);
+    map.set(city.id, { city, position: pos.clone(), mesh });
+  }
 }
 
 function addEdgeVisual(targetScene, byEdgeId, edge, cityObjects) {
@@ -1569,78 +2342,119 @@ function buildCityStructures(targetScene, cities, cityObjects) {
 }
 
 function createFarCityStructure(city, cityIndex) {
+  return createCityLogoStructure(city, cityIndex, false);
+}
+
+function createDetailedCityStructure(city, cityIndex) {
+  return createCityLogoStructure(city, cityIndex, true);
+}
+
+function createCityLogoStructure(city, cityIndex, detailed) {
   const group = new THREE.Group();
-  const baseGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.025, 18);
-  const buildingGeo = new THREE.BoxGeometry(1, 1, 1);
-  const buildingColor = CITY_TYPE_COLOR[city.cityType] ?? 0x9ad1ff;
-  const typeScale = city.cityType === "workHub" ? 1.35 : city.cityType === "mixed" ? 1.1 : 0.9;
-  const buildingCount = city.cityType === "workHub" ? 26 : city.cityType === "mixed" ? 20 : 14;
-  const populationScale = Math.min(1.8, city.population / 12000);
+  const baseRadius = detailed ? 0.27 : 0.24;
+  const emblemSize = detailed ? 0.43 : 0.36;
+  const cityColor = CITY_TYPE_COLOR[city.cityType] ?? 0x9ad1ff;
+  const emblemTexture = createCityLogoTexture(city, cityIndex, detailed ? 256 : 192, cityColor);
 
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: 0x21364f,
-    emissive: 0x122136,
-    metalness: 0.08,
-    roughness: 0.72,
+  const emblemMat = new THREE.MeshBasicMaterial({
+    map: emblemTexture,
     transparent: true,
-    opacity: 0.9
+    opacity: detailed ? 0.98 : 0.9,
+    side: THREE.DoubleSide,
+    depthWrite: false
   });
-  const base = new THREE.Mesh(baseGeo, baseMaterial);
-  base.position.set(0, 0.012, 0);
-  group.add(base);
+  const emblem = new THREE.Mesh(new THREE.PlaneGeometry(emblemSize, emblemSize), emblemMat);
+  emblem.position.set(0, detailed ? 0.23 : 0.2, 0);
+  emblem.rotation.x = -Math.PI / 2;
+  group.add(emblem);
 
-  for (let i = 0; i < buildingCount; i += 1) {
-    const seed = hashNoise((cityIndex + 1) * 100 + i * 17);
-    const angle = seed * Math.PI * 2;
-    const radius = 0.05 + hashNoise((cityIndex + 5) * 70 + i * 29) * 0.18;
-    const footprint = 0.018 + hashNoise((cityIndex + 9) * 40 + i * 11) * 0.04;
-    const height = (0.08 + hashNoise((cityIndex + 13) * 90 + i * 7) * 0.35) * typeScale * populationScale;
-
-    const buildingMat = new THREE.MeshStandardMaterial({
-      color: buildingColor,
-      emissive: new THREE.Color(buildingColor).multiplyScalar(0.23),
-      metalness: 0.22,
-      roughness: 0.45,
-      transparent: true,
-      opacity: 0.95
-    });
-
-    const building = new THREE.Mesh(buildingGeo, buildingMat);
-    building.scale.set(footprint, height, footprint);
-    building.position.set(Math.cos(angle) * radius, height * 0.5 + 0.022, Math.sin(angle) * radius);
-    group.add(building);
-  }
+  group.userData.pedestrians = [];
+  group.userData.logo = true;
+  group.userData.logoTexture = emblemTexture;
 
   return group;
 }
 
-function createDetailedCityStructure(city, cityIndex) {
-  const group = new THREE.Group();
-  const color = CITY_TYPE_COLOR[city.cityType] ?? 0x9ad1ff;
-  const density = city.cityType === "workHub" ? 1.25 : city.cityType === "mixed" ? 1.0 : 0.85;
-  const heightBias = city.cityType === "workHub" ? 1.35 : city.cityType === "mixed" ? 1.0 : 0.75;
-  const populationFactor = Math.min(1.6, city.population / 9000);
-  const layout = buildProceduralCityLayout(city, cityIndex, density, populationFactor);
+function createCityLogoTexture(city, cityIndex, size, cityColorHex) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    const fallback = new THREE.Texture(canvas);
+    fallback.needsUpdate = true;
+    return fallback;
+  }
+  const center = size * 0.5;
+  const radius = size * 0.43;
+  const seed = (k) => hashNoise((cityIndex + 1) * 977 + k * 131 + city.name.length * 37);
+  const cityColor = new THREE.Color(cityColorHex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  cityColor.getHSL(hsl);
 
-  addTerrainSurface(group, cityIndex, layout);
+  const bgA = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * 0.55 + 0.2), 0.1);
+  const bgB = new THREE.Color().setHSL((hsl.h + 0.14) % 1, Math.min(1, hsl.s * 0.45 + 0.1), 0.17);
+  const fg = new THREE.Color().setHSL((hsl.h + 0.55) % 1, 0.78, 0.8);
+  const accent = new THREE.Color().setHSL((hsl.h + 0.08) % 1, 0.92, 0.62);
 
-  const core = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.16, 0.04, 24),
-    new THREE.MeshStandardMaterial({
-      color: 0x2f4560,
-      emissive: 0x1a2d45,
-      transparent: true,
-      opacity: 0.95
-    })
-  );
-  core.position.set(0, 0.03, 0);
-  group.add(core);
+  const grad = ctx.createRadialGradient(center, center, size * 0.1, center, center, radius * 1.2);
+  grad.addColorStop(0, `#${bgB.getHexString()}`);
+  grad.addColorStop(1, `#${bgA.getHexString()}`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
 
-  addCityRoadNetwork(group, cityIndex, layout);
-  addGeneratedBlocks(group, city, cityIndex, color, heightBias, populationFactor, layout);
-  addCityParks(group, cityIndex, layout);
-  group.userData.pedestrians = addStreetPedestrians(group, city, cityIndex, layout);
-  return group;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.strokeStyle = `#${accent.getHexString()}`;
+  ctx.lineWidth = Math.max(2, size * 0.018);
+  ctx.beginPath();
+  ctx.arc(center, center, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const spokeCount = 5 + Math.floor(seed(1) * 5);
+  for (let i = 0; i < spokeCount; i += 1) {
+    const angle = (i / spokeCount) * Math.PI * 2 + seed(2 + i) * 0.4;
+    const r0 = radius * (0.25 + seed(20 + i) * 0.15);
+    const r1 = radius * (0.72 + seed(40 + i) * 0.2);
+    ctx.strokeStyle = `#${fg.getHexString()}`;
+    ctx.lineWidth = Math.max(1.5, size * (0.009 + seed(60 + i) * 0.004));
+    ctx.beginPath();
+    ctx.moveTo(center + Math.cos(angle) * r0, center + Math.sin(angle) * r0);
+    ctx.lineTo(center + Math.cos(angle) * r1, center + Math.sin(angle) * r1);
+    ctx.stroke();
+  }
+
+  const ringCount = 1 + Math.floor(seed(101) * 3);
+  for (let i = 0; i < ringCount; i += 1) {
+    const rr = radius * (0.24 + i * 0.18 + seed(120 + i) * 0.06);
+    ctx.strokeStyle = `#${fg.clone().multiplyScalar(0.85 + i * 0.1).getHexString()}`;
+    ctx.lineWidth = Math.max(1.2, size * 0.007);
+    ctx.beginPath();
+    ctx.arc(center, center, rr, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  const polySides = 3 + Math.floor(seed(141) * 4);
+  const polyR = radius * (0.18 + seed(142) * 0.11);
+  const polyRot = seed(143) * Math.PI * 2;
+  ctx.fillStyle = `#${accent.getHexString()}`;
+  ctx.beginPath();
+  for (let i = 0; i < polySides; i += 1) {
+    const a = polyRot + (i / polySides) * Math.PI * 2;
+    const x = center + Math.cos(a) * polyR;
+    const y = center + Math.sin(a) * polyR;
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 function buildProceduralCityLayout(city, cityIndex, density, populationFactor) {
@@ -2697,8 +3511,9 @@ function updateHud(simFrame, simWorld) {
   hud.phase.textContent = safeFrame.phase ?? "-";
   hud.week.textContent = formatWeek(safeFrame.dayOfWeek, safeFrame.isWeekend);
   hud.flow.textContent = `out ${outbound} / in ${inbound}`;
+  hud.layer0Trails.textContent = `${t("hud.active")} ${layer0TrailStats.active} / ${t("hud.spawned")} ${layer0TrailStats.spawned}`;
   hud.humanLod.textContent = humanLodRenderer.mode.toUpperCase();
-  hud.nameLabels.textContent = showNameLabels ? "ON" : "OFF";
+  hud.nameLabels.textContent = showNameLabels ? t("common.on") : t("common.off");
   hud.states.textContent = `H:${s.Home} C:${s.Commute} W:${s.Work} L:${s.Leisure} S:${s.Sleep}`;
   hud.encounters.textContent = String(encounterSummary.total ?? 0);
   hud.focus.textContent = (people.focusCityIds ?? [])
@@ -2716,17 +3531,19 @@ function updateHud(simFrame, simWorld) {
   hud.nations.textContent = formatNationSummary(safeFrame.geopolitics);
   hud.metaOrder.textContent = formatMetaOrderSummary(safeFrame.geopolitics);
   hud.diplomacy.textContent = formatDiplomacySummary(safeFrame.geopolitics);
+  hud.channelLines.textContent =
+    `${t("hud.channel.diplomacy")}:${channelOverlayStats.diplomacy} / ${t("hud.channel.institutional")}:${channelOverlayStats.institutional} / ${t("hud.channel.shadow")}:${channelOverlayStats.shadow} / ${t("hud.channel.community")}:${channelOverlayStats.community}`;
   hud.alliances.textContent = formatAllianceSummary(safeFrame.geopolitics);
   hud.hostilities.textContent = formatHostilitySummary(safeFrame.geopolitics);
   hud.military.textContent = formatMilitarySummary(safeFrame.geopolitics, resolvedWorld);
   hud.events.textContent = formatEvents(people.events);
   hud.nationEvents.textContent = formatNationEventSummary(people.events);
   hud.history.textContent = formatHistory(safeFrame);
-  hud.lineageSummary.textContent = people.lineage?.summary ?? "-";
+  hud.lineageSummary.textContent = localizeGeneratedText(people.lineage?.summary ?? "-");
   hud.lineageTree.textContent = formatLineageTree(people.lineage?.treeLines);
   const graphMeta = renderLineageGraph(people.lineage);
   const selectedName = graphMeta?.selectedName ? ` | SELECTED: ${graphMeta.selectedName}` : "";
-  hud.lineageGraphTitle.textContent = `LINEAGE GRAPH | ${people.lineage?.summary ?? "-"}${selectedName}`;
+  hud.lineageGraphTitle.textContent = `LINEAGE GRAPH | ${localizeGeneratedText(people.lineage?.summary ?? "-")}${selectedName}`;
 
   const top = people.highlights ?? {};
   hud.topEcon.textContent = formatHighlight(top.economicPower, resolvedWorld);
@@ -2755,8 +3572,8 @@ function updateHud(simFrame, simWorld) {
     timelineUi.range.max = String(max);
     timelineUi.range.value = String(Math.max(0, safeFrame.historyCursor));
     timelineUi.status.textContent = timelineMode
-      ? `Timeline ${safeFrame.historyCursor + 1}/${max + 1}`
-      : "Live";
+      ? `${t("hud.timeline")} ${safeFrame.historyCursor + 1}/${max + 1}`
+      : t("timeline.live");
   }
 }
 
@@ -2764,7 +3581,8 @@ function formatReligionCounts(rows) {
   if (!rows || rows.length === 0) {
     return "-";
   }
-  return rows.map((row) => `${row.religion}:${row.count}人(${row.share}%)`).join(" | ");
+  const peopleUnit = t("common.people");
+  return rows.map((row) => `${row.religion}:${row.count}${peopleUnit}(${row.share}%)`).join(" | ");
 }
 
 function formatReligionInfluence(rows) {
@@ -2780,24 +3598,25 @@ function formatReligionDoctrine(rows) {
   }
   return rows
     .slice(0, 3)
-    .map((row) => `${row.religion}:${row.doctrine}`)
+    .map((row) => `${row.religion}:${localizeGeneratedText(row.doctrine)}`)
     .join(" | ");
 }
 
 function formatWeek(dayOfWeek, isWeekend) {
   const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const i = Number.isFinite(dayOfWeek) ? dayOfWeek : 0;
-  return `${labels[Math.max(0, Math.min(labels.length - 1, i))]}${isWeekend ? " (Weekend)" : ""}`;
+  return `${labels[Math.max(0, Math.min(labels.length - 1, i))]}${isWeekend ? ` (${t("hud.weekend")})` : ""}`;
 }
 
 function formatDemographicTotals(demo) {
   if (!demo) {
     return "-";
   }
+  const warDeaths = demo.totalWarDeaths ?? 0;
   return (
-    `出生:${demo.totalBirths} / 死亡:${demo.totalDeaths} / 婚姻:${demo.totalMarriages ?? 0} / ` +
-    `離婚:${demo.totalDivorces ?? 0} / 同居:${demo.currentCohabitingCouples ?? 0}/${demo.currentCouples ?? 0} / ` +
-    `純増:${demo.totalBirths - demo.totalDeaths}`
+    `${t("hud.births")}:${demo.totalBirths} / ${t("hud.deaths")}:${demo.totalDeaths}(${t("hud.war")}${warDeaths}) / ${t("hud.marriages")}:${demo.totalMarriages ?? 0} / ` +
+    `${t("hud.divorces")}:${demo.totalDivorces ?? 0} / ${t("hud.cohab")}:${demo.currentCohabitingCouples ?? 0}/${demo.currentCouples ?? 0} / ` +
+    `${t("hud.net")}:${demo.totalBirths - demo.totalDeaths}`
   );
 }
 
@@ -2812,13 +3631,13 @@ function formatDemographicByCity(demo, simWorld) {
     .slice(0, 5);
 
   if (rows.length === 0) {
-    return "変化なし";
+    return t("common.noChange");
   }
 
   return rows
     .map((row) => {
       const name = simWorld.getCityById(row.cityId)?.name ?? row.cityId;
-      return `${name}(+${row.births}/-${row.deaths}/婚${row.marriages ?? 0}/離${row.divorces ?? 0})`;
+      return `${name}(+${row.births}/-${row.deaths}[${t("hud.war")}${row.warDeaths ?? 0}]/${t("hud.marriages")}${row.marriages ?? 0}/${t("hud.divorces")}${row.divorces ?? 0})`;
     })
     .join(" | ");
 }
@@ -2831,72 +3650,89 @@ function formatEconomy(economy, simWorld) {
     .slice()
     .sort((a, b) => b.avgIncome - a.avgIncome)[0];
   if (!topCity) {
-    return `平均所得:${economy.avgIncome} / 失業率:${economy.unemploymentRate}%`;
+    return `${t("hud.avgIncome")}:${economy.avgIncome} / ${t("hud.unemployment")}:${economy.unemploymentRate}%`;
   }
   const cityName = simWorld.getCityById(topCity.cityId)?.name ?? topCity.cityId;
-  return `平均所得:${economy.avgIncome} / 失業率:${economy.unemploymentRate}% / 最高:${cityName}`;
+  return `${t("hud.avgIncome")}:${economy.avgIncome} / ${t("hud.unemployment")}:${economy.unemploymentRate}% / ${t("hud.top")}:${cityName}`;
 }
 
 function formatTopCompanies(companies, simWorld) {
   const rows = companies?.topCompanies ?? [];
+  const typeRows = companies?.byType ?? [];
   if (rows.length === 0) {
     return "-";
   }
-  return rows
+  const leaders = rows
     .slice(0, 2)
     .map((c) => {
       const city = simWorld.getCityById(c.cityId)?.name ?? c.cityId;
-      return `${c.listed ? "★" : ""}${c.name}(利${c.profit}/株${c.stock})@${city}`;
+      return `${c.listed ? "★" : ""}${c.name}[${c.companyType ?? "General"}](${t("hud.profitShort")}${c.profit}/${t("hud.stockShort")}${c.stock})@${city}`;
     })
     .join(" | ");
+  const typeLine = typeRows.length
+    ? typeRows
+        .map((row) => `${row.companyType}:${row.count}/${row.profitShare ?? 0}%`)
+        .join(" ")
+    : "-";
+  return `${leaders} || ${t("hud.companyTypes")}: ${typeLine}`;
 }
 
 function formatCompaniesByCity(companies, simWorld) {
   const rows = companies?.byCity ?? [];
+  const concentration = companies?.concentration ?? null;
+  const policy = companies?.policy ?? null;
   if (rows.length === 0) {
     return "-";
   }
-  return rows
+  const cityLine = rows
     .slice()
     .sort((a, b) => b.profit - a.profit)
     .slice(0, 3)
     .map((r) => {
       const city = simWorld.getCityById(r.cityId)?.name ?? r.cityId;
-      return `${city}:${r.companies}社/利${r.profit}`;
+      return `${city}:${r.companies}${t("hud.companiesSuffix")}/${t("hud.profitShort")}${r.profit}`;
     })
     .join(" | ");
+  const concLine = concentration
+    ? `${t("hud.hhi")} ${concentration.avgHHI}/${concentration.maxHHI} P:${Math.round((concentration.penalizedRatio ?? 0) * 100)}%`
+    : `${t("hud.hhi")} -`;
+  const policyLine = policy
+    ? `AT:${policy.effectiveAntitrust} Auto:${policy.antitrustAutoBoost} TaxPool:${policy.redistributionPool}`
+    : "-";
+  return `${cityLine} || ${concLine} || ${policyLine}`;
 }
 
 function formatEvents(events) {
   if (!events || events.length === 0) {
-    return "なし";
+    return t("common.none");
   }
-  return events.slice(0, 2).map((e) => e.text).join(" | ");
+  return events.slice(0, 2).map((e) => localizeGeneratedText(e.text)).join(" | ");
 }
 
 function formatNationEventSummary(events) {
   const rows = (events ?? []).filter((e) => ["nation_founded", "territory_shift", "nation_extinct"].includes(e?.type));
   if (rows.length === 0) {
-    return "なし";
+    return t("common.none");
   }
   const founded = rows.filter((e) => e.type === "nation_founded").length;
   const shifts = rows.filter((e) => e.type === "territory_shift").length;
   const extinct = rows.filter((e) => e.type === "nation_extinct").length;
-  const latest = rows[0]?.text ?? "-";
-  return `建国:${founded} 領土変化:${shifts} 消滅:${extinct} | 最新:${latest}`;
+  const latest = localizeGeneratedText(rows[0]?.text ?? "-");
+  return `${t("hud.founded")}:${founded} ${t("hud.territoryShift")}:${shifts} ${t("hud.extinct")}:${extinct} | ${t("hud.latest")}:${latest}`;
 }
 
 function formatPopulationBoard(simFrame, simWorld) {
   const tracked = Object.values(simFrame.people.stateCounts ?? {}).reduce((sum, v) => sum + v, 0);
   const stats = simFrame.people.statisticalPopulation ?? {};
   const estimated = Object.values(stats).reduce((sum, row) => sum + (row.estimatedTotal ?? 0), 0);
-  const rows = [`追跡人口: ${tracked}人`, `推定総人口: ${estimated}人`];
+  const peopleUnit = t("common.people");
+  const rows = [`${t("hud.trackedPopulation")}: ${tracked}${peopleUnit}`, `${t("hud.estimatedPopulation")}: ${estimated}${peopleUnit}`];
   const top = Object.entries(stats)
     .sort((a, b) => (b[1].estimatedTotal ?? 0) - (a[1].estimatedTotal ?? 0))
     .slice(0, 4);
   for (const [cityId, row] of top) {
     const name = simWorld.getCityById(cityId)?.name ?? cityId;
-    rows.push(`${name}: 推定${row.estimatedTotal} / 追跡${row.tracked}`);
+    rows.push(`${name}: ${t("hud.estimated")}${row.estimatedTotal} / ${t("hud.trackedPopulation")}${row.tracked}`);
   }
   return rows.join("\n");
 }
@@ -2906,7 +3742,7 @@ function formatCityNewsBoard(simFrame, simWorld) {
   const cityStats = simFrame.people.demographics?.cityStats ?? [];
   const lines = [];
   for (const e of events.slice(0, 6)) {
-    lines.push(`• ${e.text}`);
+    lines.push(`• ${localizeGeneratedText(e.text)}`);
   }
   const movers = cityStats
     .slice()
@@ -2914,10 +3750,10 @@ function formatCityNewsBoard(simFrame, simWorld) {
     .slice(0, 3);
   for (const row of movers) {
     const name = simWorld.getCityById(row.cityId)?.name ?? row.cityId;
-    lines.push(`• ${name}: 出生${row.births} 死亡${row.deaths} 純増${row.net}`);
+    lines.push(`• ${name}: ${t("hud.births")}${row.births} ${t("hud.deaths")}${row.deaths} ${t("hud.net")}${row.net}`);
   }
   if (lines.length === 0) {
-    return "ニュースなし";
+    return t("common.noNews");
   }
   return lines.join("\n");
 }
@@ -2925,14 +3761,14 @@ function formatCityNewsBoard(simFrame, simWorld) {
 function formatStockBoard(simFrame, simWorld) {
   const rows = simFrame.people.companies?.topCompanies ?? [];
   if (rows.length === 0) {
-    return "企業データなし";
+    return t("common.noCompanyData");
   }
   return rows
     .slice(0, 8)
     .map((c, i) => {
       const city = simWorld.getCityById(c.cityId)?.name ?? c.cityId;
       const mark = c.listed ? "★" : " ";
-      return `${i + 1}. ${mark}${c.name}  株:${c.stock}  利:${c.profit}  都市:${city}`;
+      return `${i + 1}. ${mark}${c.name}  ${t("hud.stockShort")}:${c.stock}  ${t("hud.profitShort")}:${c.profit}  CITY:${city}`;
     })
     .join("\n");
 }
@@ -2944,8 +3780,8 @@ function renderStockMarketBoard(simFrame, simWorld) {
   }
   const rows = simFrame.people.companies?.topCompanies ?? [];
   if (rows.length === 0) {
-    insightUi.stockSummary.textContent = "MARKET: N/A";
-    insightUi.stockTape.textContent = "企業データなし";
+    insightUi.stockSummary.textContent = t("hud.market.na");
+    insightUi.stockTape.textContent = t("common.noCompanyData");
     insightUi.stockTable.textContent = "";
     drawMarketIndexChart(insightUi.stockCanvas, stockVizState.indexHistory, false);
     return;
@@ -3180,7 +4016,7 @@ function formatMacroSystem(system) {
   if (!system) {
     return "-";
   }
-  return `疫${(system.epidemicLevel ?? 0).toFixed(2)} 気${(system.climateStress ?? 0).toFixed(2)} 文${(system.culturalDrift ?? 0).toFixed(2)} 市${(system.marketIndex ?? 1).toFixed(2)}`;
+  return `${t("hud.macro.epi")}${(system.epidemicLevel ?? 0).toFixed(2)} ${t("hud.macro.cli")}${(system.climateStress ?? 0).toFixed(2)} ${t("hud.macro.cul")}${(system.culturalDrift ?? 0).toFixed(2)} ${t("hud.macro.mar")}${(system.marketIndex ?? 1).toFixed(2)}`;
 }
 
 function formatNationSummary(geo) {
@@ -3192,7 +4028,7 @@ function formatNationSummary(geo) {
     .slice()
     .sort((a, b) => b.power - a.power)
     .slice(0, 3)
-    .map((n) => `${n.name}(力${n.power})`)
+    .map((n) => `${n.name}(${t("hud.power")}${n.power})`)
     .join(" | ");
 }
 
@@ -3200,7 +4036,7 @@ function formatMetaOrderSummary(geo) {
   const stack = geo?.governanceStack ?? [];
   const blocTop = (geo?.blocs ?? []).slice().sort((a, b) => (b.influence ?? 0) - (a.influence ?? 0))[0];
   const hegTop = (geo?.hegemonicNetworks ?? []).slice().sort((a, b) => (b.influence ?? 0) - (a.influence ?? 0))[0];
-  const stackLabel = stack.length ? `${stack.length}層` : "0層";
+  const stackLabel = stack.length ? `${stack.length}${t("common.layers")}` : `0${t("common.layers")}`;
   const blocLabel = blocTop ? `${blocTop.name}` : "-";
   const hegLabel = hegTop ? `${hegTop.actorName}` : "-";
   return `${stackLabel} / Bloc:${blocLabel} / Heg:${hegLabel}`;
@@ -3215,25 +4051,28 @@ function formatDiplomacySummary(geo) {
   if (!top) {
     return "-";
   }
+  const defenseBudgetAvg = Number(geo?.defenseBudgetAvg ?? 0);
+  const warContractShare = Number(geo?.warContractShare ?? 0);
   return (
     `${top.nationAId}-${top.nationBId}:${top.status} ` +
     `T${top.tension.toFixed(2)} ` +
-    `信${(top.trustMemory ?? 0).toFixed(2)} ` +
-    `交${(top.tradeDependence ?? 0).toFixed(2)} ` +
-    `価${(top.valueDistance ?? 0).toFixed(2)}`
+    `${t("hud.trustShort")}${(top.trustMemory ?? 0).toFixed(2)} ` +
+    `${t("hud.tradeShort")}${(top.tradeDependence ?? 0).toFixed(2)} ` +
+    `${t("hud.valueShort")}${(top.valueDistance ?? 0).toFixed(2)} ` +
+    `${t("hud.defenseBudgetAvg")}:${defenseBudgetAvg.toFixed(2)} ${t("hud.warContractShare")}:${(warContractShare * 100).toFixed(1)}%`
   );
 }
 
 function formatMilitarySummary(geo, simWorld) {
   const rows = geo?.militaryCompanies ?? [];
   if (rows.length === 0) {
-    return "なし";
+    return t("common.none");
   }
   return rows
     .slice(0, 2)
     .map((c) => {
       const city = c.cityId ? simWorld.getCityById(c.cityId)?.name ?? c.cityId : "-";
-      return `${c.name}(準備${c.readiness}@${city})`;
+      return `${c.name}(${t("hud.readiness")}${c.readiness}@${city})`;
     })
     .join(" | ");
 }
@@ -3246,7 +4085,7 @@ function formatAllianceSummary(geo) {
     .sort((a, b) => (b.relation ?? 0) - (a.relation ?? 0))
     .slice(0, 3);
   if (rows.length === 0) {
-    return "なし";
+    return t("common.none");
   }
   return rows
     .map((r) => `${nationName.get(r.nationAId) ?? r.nationAId}↔${nationName.get(r.nationBId) ?? r.nationBId}`)
@@ -3261,7 +4100,7 @@ function formatHostilitySummary(geo) {
     .sort((a, b) => (b.tension ?? 0) - (a.tension ?? 0))
     .slice(0, 3);
   if (rows.length === 0) {
-    return "なし";
+    return t("common.none");
   }
   return rows
     .map((r) => {
@@ -3283,9 +4122,31 @@ function formatHistory(simFrame) {
 
 function formatLineageTree(lines) {
   if (!lines || lines.length === 0) {
-    return "家系データなし";
+    return t("hud.lineage.none");
   }
-  return lines.join("\n");
+  const filtered = lines
+    .filter((line) => {
+      const s = String(line ?? "").trim();
+      if (!s) {
+        return false;
+      }
+      return !/^(規模トップ|資産トップ|権力トップ|Top Size|Top Assets|Top Power)\s*:/.test(s);
+    })
+    .filter((line) => {
+      const s = String(line ?? "").trim();
+      const isStandaloneNameLike =
+        !s.includes(":") &&
+        !s.includes("|") &&
+        !s.includes("→") &&
+        !/\d/.test(s) &&
+        s.length <= 48;
+      return !isStandaloneNameLike;
+    })
+    .map((line) => localizeGeneratedText(line));
+  if (filtered.length === 0) {
+    return t("hud.lineage.none");
+  }
+  return filtered.join("\n");
 }
 
 function renderLineageGraph(lineage) {
@@ -3705,4 +4566,27 @@ function makeArc(from, to, heightFactor) {
   const mid = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
   const up = mid.clone().normalize().multiplyScalar(mid.length() * (1 + heightFactor * 0.08));
   return new THREE.QuadraticBezierCurve3(from.clone(), up, to.clone());
+}
+
+function makeSurfaceArcPoints(from, to, segments = 30, radiusScale = 1.003) {
+  const a = from.clone().normalize();
+  const b = to.clone().normalize();
+  const radius = ((from.length() + to.length()) * 0.5) * radiusScale;
+  const dot = THREE.MathUtils.clamp(a.dot(b), -1, 1);
+  const omega = Math.acos(dot);
+  const sinOmega = Math.sin(omega);
+  const out = [];
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / Math.max(1, segments);
+    let dir;
+    if (sinOmega < 1e-5) {
+      dir = a.clone().lerp(b, t).normalize();
+    } else {
+      const w0 = Math.sin((1 - t) * omega) / sinOmega;
+      const w1 = Math.sin(t * omega) / sinOmega;
+      dir = a.clone().multiplyScalar(w0).add(b.clone().multiplyScalar(w1)).normalize();
+    }
+    out.push(dir.multiplyScalar(radius));
+  }
+  return out;
 }

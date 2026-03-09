@@ -141,6 +141,7 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase, force
     evolveSecretSocieties(world, state, nationStats, rng, day, events, config);
     applyWarTerritorialShift(world, state, nationStats, rng, events);
     applyBorderPolicyByDiplomacy(world, state.diplomacy, state, config);
+    updateNationPolicyLevers(world, state, nationStats, config);
     syncNationEventHistory({ world, state, events, day });
   }
 
@@ -176,6 +177,9 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase, force
       stress: Number((stats.stress ?? 0).toFixed(3)),
       resourceStrength: Number((stats.resourceStrength ?? 0).toFixed(3)),
       humanQuality: Number((stats.humanQuality ?? 0).toFixed(3)),
+      defenseBudget: Number((nation.defenseBudget ?? 0.2).toFixed(3)),
+      itRegulationLevel: Number((nation.itRegulationLevel ?? 0.12).toFixed(3)),
+      militaryExportControl: Number((nation.militaryExportControl ?? 0.18).toFixed(3)),
       currencyCode: currency.codes?.[nation.id] ?? `${nation.id}C`,
       fxAgainstBase: Number(((currency.fxAgainstBase?.[nation.id] ?? 1)).toFixed(3)),
       inflation: Number(((currency.inflation?.[nation.id] ?? 0.012)).toFixed(3)),
@@ -216,7 +220,9 @@ export function updateGeopolitics({ world, frame, config, rng, day, phase, force
     ],
     events: events.slice(0, 6),
     nationHistoryTail: (state.nationHistory ?? []).slice(-20),
-    edgeRestrictionStats: state.edgeRestrictionStats ?? { open: 0, permit: 0, sealed: 0, changedThisTick: 0 }
+    edgeRestrictionStats: state.edgeRestrictionStats ?? { open: 0, permit: 0, sealed: 0, changedThisTick: 0 },
+    defenseBudgetAvg: Number((state.defenseBudgetAvg ?? 0).toFixed(3)),
+    warContractShare: Number((state.warContractShare ?? 0).toFixed(3))
   };
 }
 
@@ -289,8 +295,78 @@ function ensureGeopoliticsState(world) {
     if (!Number.isFinite(world.systemState.currencies.policyRate[nation.id])) {
       world.systemState.currencies.policyRate[nation.id] = 0.02;
     }
+    if (!Number.isFinite(nation.defenseBudget)) {
+      nation.defenseBudget = 0.2;
+    }
+    if (!Number.isFinite(nation.itRegulationLevel)) {
+      nation.itRegulationLevel = 0.12;
+    }
+    if (!Number.isFinite(nation.militaryExportControl)) {
+      nation.militaryExportControl = 0.18;
+    }
   }
   return world.systemState.geopolitics;
+}
+
+function updateNationPolicyLevers(world, state, nationStats, config) {
+  const entries = Object.entries(state?.diplomacy ?? {});
+  const relations = entries.map(([key, rel]) => {
+    const [nationAId, nationBId] = String(key).split("|");
+    return { ...rel, nationAId, nationBId };
+  });
+  const wars = relations.filter((r) => r?.status === "war");
+  const crises = relations.filter((r) => r?.status === "crisis");
+  const sanctionsGlobal = clamp((crises.length + wars.length * 1.8) / Math.max(1, relations.length * 2.2), 0, 1);
+  state.sanctionPressure = Number(sanctionsGlobal.toFixed(4));
+  let defenseSum = 0;
+  let nationCount = 0;
+  const warNation = new Set();
+  for (const rel of wars) {
+    if (rel?.nationAId) {
+      warNation.add(rel.nationAId);
+    }
+    if (rel?.nationBId) {
+      warNation.add(rel.nationBId);
+    }
+  }
+  let warBudget = 0;
+  let totalBudget = 0;
+  for (const nation of world.nations ?? []) {
+    const relForNation = relations.filter((r) => r?.nationAId === nation.id || r?.nationBId === nation.id);
+    const tensionAvg = relForNation.length
+      ? relForNation.reduce((sum, row) => sum + (row?.tension ?? 0.2), 0) / relForNation.length
+      : 0.2;
+    const warCount = relForNation.filter((row) => row?.status === "war").length;
+    const stats = nationStats?.[nation.id] ?? {};
+    const stress = stats?.stress ?? 0.3;
+    const nextDefense = clamp(
+      (nation.defenseBudget ?? 0.2) * 0.78 + (0.14 + tensionAvg * 0.38 + warCount * 0.14 + stress * 0.08) * 0.22,
+      0.05,
+      1
+    );
+    const nextReg = clamp(
+      (nation.itRegulationLevel ?? 0.12) * 0.82 + (0.09 + tensionAvg * 0.08 + sanctionsGlobal * 0.1) * 0.18,
+      0.02,
+      0.95
+    );
+    const nextExport = clamp(
+      (nation.militaryExportControl ?? 0.18) * 0.8 + (0.12 + warCount * 0.22 + sanctionsGlobal * 0.35) * 0.2,
+      0.05,
+      1
+    );
+    nation.defenseBudget = Number(nextDefense.toFixed(4));
+    nation.itRegulationLevel = Number(nextReg.toFixed(4));
+    nation.militaryExportControl = Number(nextExport.toFixed(4));
+    defenseSum += nation.defenseBudget;
+    nationCount += 1;
+    totalBudget += nation.defenseBudget;
+    if (warNation.has(nation.id)) {
+      warBudget += nation.defenseBudget;
+    }
+  }
+  state.defenseBudgetAvg = defenseSum / Math.max(1, nationCount);
+  state.warContractShare = totalBudget > 0 ? warBudget / totalBudget : 0;
+  void config;
 }
 
 function updateMetaOrder({ world, frame, config, state, rng, day, events }) {
