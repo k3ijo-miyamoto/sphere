@@ -155,7 +155,16 @@ function classifyMisinfoType({ truthValue, emotion, sourceType }) {
 function applyInfoConsumption({ world, people, state, config, rng, day, phase }) {
   const activeInfos = state.activeInfos ?? [];
   if (!activeInfos.length || !people?.length) {
-    return { consumed: 0, shared: 0, verified: 0, reported: 0, persuaded: 0, actions: [] };
+    return {
+      consumed: 0,
+      shared: 0,
+      verified: 0,
+      reported: 0,
+      persuaded: 0,
+      layerTransitions: createLayerMatrix(),
+      layerBlocked: createLayerMatrix(),
+      actions: []
+    };
   }
   if (state.daily.day !== day) {
     state.daily = { day, generated: 0, consumed: 0, shared: 0, reported: 0, verified: 0 };
@@ -168,6 +177,8 @@ function applyInfoConsumption({ world, people, state, config, rng, day, phase })
   let verified = 0;
   let reported = 0;
   let persuaded = 0;
+  const layerTransitions = createLayerMatrix();
+  const layerBlocked = createLayerMatrix();
   const actions = [];
 
   for (const person of people) {
@@ -190,8 +201,10 @@ function applyInfoConsumption({ world, people, state, config, rng, day, phase })
       const allowed = getEdgeAllowed(state.edgeAllowed, info.sphereOrigin, info.sourceLayer ?? "Layer0", targetLayer);
       const gateProb = clamp((allowed.prob ?? 0.35) * (1 - (allowed.cost ?? 0.2) * 0.4), 0.01, 0.99);
       if (rng.next() > gateProb) {
+        addLayerCount(layerBlocked, info.sourceLayer ?? "Layer0", targetLayer, 1);
         continue;
       }
+      addLayerCount(layerTransitions, info.sourceLayer ?? "Layer0", targetLayer, 1);
       const cityId = person.currentCityId ?? person.homeCityId;
       consumed += 1;
       actions.push({
@@ -276,12 +289,129 @@ function applyInfoConsumption({ world, people, state, config, rng, day, phase })
     }
   }
 
+  for (const community of world.communities ?? []) {
+    const sphereId = pickOne(world.spheres ?? [], rng)?.id ?? activeInfos[0]?.sphereOrigin;
+    const pool = activeInfos.filter((x) => x.sphereOrigin === sphereId);
+    if (!pool.length) {
+      continue;
+    }
+    const trials = 1 + (rng.next() < 0.45 ? 1 : 0);
+    for (let i = 0; i < trials; i += 1) {
+      const info = pickOne(pool, rng);
+      if (!info) {
+        continue;
+      }
+      const targetLayer = community.roleLayer ?? "Layer1";
+      const allowed = getEdgeAllowed(state.edgeAllowed, info.sphereOrigin, info.sourceLayer ?? "Layer0", targetLayer);
+      const gateProb = clamp((allowed.prob ?? 0.35) * (1 - (allowed.cost ?? 0.2) * 0.4), 0.01, 0.99);
+      if (rng.next() > gateProb) {
+        addLayerCount(layerBlocked, info.sourceLayer ?? "Layer0", targetLayer, 1);
+        continue;
+      }
+      addLayerCount(layerTransitions, info.sourceLayer ?? "Layer0", targetLayer, 1);
+      consumed += 1;
+      const cityId = pickOne(community.memberCityUids ?? [], rng) ?? info.cityOrigin;
+      actions.push({
+        type: "consume",
+        actorId: community.id,
+        actorType: "community",
+        infoId: info.infoId,
+        sphereId: info.sphereOrigin,
+        cityId,
+        day,
+        phase
+      });
+      const cohesion = clamp(community.cohesion ?? 0.5, 0, 1);
+      const shareNow = rng.next() < clamp(cohesion * 0.28 + (info.emotion ?? 0.4) * 0.24, 0.02, 0.78);
+      if (shareNow) {
+        shared += 1;
+        addLayerCount(layerTransitions, "Layer1", "Layer0", 1);
+        actions.push({
+          type: "share",
+          actorId: community.id,
+          actorType: "community",
+          infoId: info.infoId,
+          sphereId: info.sphereOrigin,
+          cityId,
+          day,
+          phase
+        });
+      }
+    }
+  }
+
+  for (const institution of world.institutions ?? []) {
+    const sphereId = pickOne(world.spheres ?? [], rng)?.id ?? activeInfos[0]?.sphereOrigin;
+    const pool = activeInfos.filter((x) => x.sphereOrigin === sphereId);
+    if (!pool.length) {
+      continue;
+    }
+    const trials = 1 + (rng.next() < 0.35 ? 1 : 0);
+    for (let i = 0; i < trials; i += 1) {
+      const info = pickOne(pool, rng);
+      if (!info) {
+        continue;
+      }
+      const targetLayer = institution.roleLayer ?? "Layer2";
+      const allowed = getEdgeAllowed(state.edgeAllowed, info.sphereOrigin, info.sourceLayer ?? "Layer0", targetLayer);
+      const gateProb = clamp((allowed.prob ?? 0.35) * (1 - (allowed.cost ?? 0.2) * 0.4), 0.01, 0.99);
+      if (rng.next() > gateProb) {
+        addLayerCount(layerBlocked, info.sourceLayer ?? "Layer0", targetLayer, 1);
+        continue;
+      }
+      addLayerCount(layerTransitions, info.sourceLayer ?? "Layer0", targetLayer, 1);
+      consumed += 1;
+      const cityId = pickOne(institution.jurisdiction ?? [], rng) ?? info.cityOrigin;
+      actions.push({
+        type: "consume",
+        actorId: institution.id,
+        actorType: "institution",
+        infoId: info.infoId,
+        sphereId: info.sphereOrigin,
+        cityId,
+        day,
+        phase
+      });
+      const verificationBias = clamp((institution.enforcement ?? 0.5) * 0.34 + (institution.regulationStrength ?? 0.5) * 0.28, 0.05, 0.86);
+      const verifyNow = rng.next() < verificationBias;
+      if (verifyNow) {
+        verified += 1;
+        addLayerCount(layerTransitions, "Layer2", "Layer1", 1);
+        actions.push({
+          type: "verify",
+          actorId: institution.id,
+          actorType: "institution",
+          infoId: info.infoId,
+          sphereId: info.sphereOrigin,
+          cityId,
+          day,
+          phase
+        });
+      }
+      const reportNow = verifyNow && rng.next() < clamp((institution.enforcement ?? 0.5) * 0.35 + (info.misinfoType ? 0.24 : 0.03), 0.02, 0.88);
+      if (reportNow) {
+        reported += 1;
+        addLayerCount(layerTransitions, "Layer2", "Layer0", 1);
+        actions.push({
+          type: "report",
+          actorId: institution.id,
+          actorType: "institution",
+          infoId: info.infoId,
+          sphereId: info.sphereOrigin,
+          cityId,
+          day,
+          phase
+        });
+      }
+    }
+  }
+
   applyCityInfoEffects(world, cityEffects);
   state.daily.consumed += consumed;
   state.daily.shared += shared;
   state.daily.verified += verified;
   state.daily.reported += reported;
-  return { consumed, shared, verified, reported, persuaded, actions };
+  return { consumed, shared, verified, reported, persuaded, layerTransitions, layerBlocked, actions };
 }
 
 function applyPersonBeliefDrift(person, info, perceivedTruth, sharedNow, verifyNow) {
@@ -356,8 +486,25 @@ function buildMetrics(state, interaction, day) {
     sharedThisTick: interaction.shared,
     reportedThisTick: interaction.reported,
     verifiedThisTick: interaction.verified,
+    layerTransitions: interaction.layerTransitions ?? createLayerMatrix(),
+    layerBlocked: interaction.layerBlocked ?? createLayerMatrix(),
     typeTotals: { ...state.typeTotals }
   };
+}
+
+function createLayerMatrix() {
+  return {
+    Layer0: { Layer0: 0, Layer1: 0, Layer2: 0 },
+    Layer1: { Layer0: 0, Layer1: 0, Layer2: 0 },
+    Layer2: { Layer0: 0, Layer1: 0, Layer2: 0 }
+  };
+}
+
+function addLayerCount(matrix, fromLayer, toLayer, amount) {
+  if (!matrix?.[fromLayer] || typeof matrix[fromLayer][toLayer] !== "number") {
+    return;
+  }
+  matrix[fromLayer][toLayer] += amount;
 }
 
 function pickOne(list, rng) {

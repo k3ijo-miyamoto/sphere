@@ -337,7 +337,14 @@
       <div class="hud-controls">
         <button id="bgm-toggle" class="hud-button">BGM: OFF</button>
         <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">
-          Scale
+          <span data-i18n="label.language">言語</span>
+          <select id="language-switch" class="hud-button" style="padding:1px 6px;">
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+          <span data-i18n="label.scale">Scale</span>
           <select id="scale-preset" class="hud-button" style="padding:1px 6px;">
             <option value="base">900</option>
             <option value="large">3000</option>
@@ -345,52 +352,54 @@
           </select>
         </label>
         <button id="perf-auto-toggle" class="hud-button">AutoLOD: ON</button>
-        <button id="snapshot-save-now" class="hud-button">Save Snapshot</button>
+        <button id="snapshot-save-now" class="hud-button" data-i18n="button.saveSnapshot">Save Snapshot</button>
       </div>
-      <div class="row">時刻: <strong id="time">BOOTING...</strong></div>
-      <div class="row">フェーズ: <strong id="phase">-</strong></div>
-      <div class="row">週次: <strong id="week">-</strong></div>
-      <div class="row">性能: <strong id="perf"></strong></div>
-      <div class="row">フロー: <strong id="flow">-</strong></div>
-      <div class="row">人LOD: <strong id="human-lod"></strong></div>
-      <div class="row">氏名表示(N): <strong id="name-labels"></strong></div>
-      <div class="row">状態: <strong id="states">-</strong></div>
-      <div class="row">夜間交流: <strong id="encounters">-</strong></div>
-      <div class="row">フォーカス都市: <strong id="focus"></strong></div>
-      <div class="row">宗教分布: <strong id="religion-counts"></strong></div>
-      <div class="row">宗教影響力: <strong id="religion-influence"></strong></div>
-      <div class="row">宗教信条: <strong id="religion-doctrine"></strong></div>
-      <div class="row">出生/死亡(全体): <strong id="demo-total"></strong></div>
-      <div class="row">出生/死亡(都市別): <strong id="demo-city"></strong></div>
-      <div class="row">経済サマリ: <strong id="economy"></strong></div>
-      <div class="row">企業トップ: <strong id="company-top"></strong></div>
-      <div class="row">企業(都市別): <strong id="company-city"></strong></div>
-      <div class="row">マクロ(疫病/気候/文化/市場): <strong id="macro-system"></strong></div>
-      <div class="row">国家: <strong id="nations"></strong></div>
-      <div class="row">秩序レイヤ: <strong id="meta-order"></strong></div>
-      <div class="row">外交: <strong id="diplomacy"></strong></div>
-      <div class="row">同盟関係: <strong id="alliances"></strong></div>
-      <div class="row">敵対関係: <strong id="hostilities"></strong></div>
-      <div class="row">軍事企業: <strong id="military"></strong></div>
-      <div class="row">イベント: <strong id="events"></strong></div>
-      <div class="row">国家イベント: <strong id="nation-events"></strong></div>
-      <div class="row">履歴: <strong id="history"></strong></div>
-      <div class="row">家系サマリ: <strong id="lineage-summary"></strong></div>
+      <div class="row"><span data-i18n="label.time">時刻</span>: <strong id="time">BOOTING...</strong></div>
+      <div class="row"><span data-i18n="label.phase">フェーズ</span>: <strong id="phase">-</strong></div>
+      <div class="row"><span data-i18n="label.weekly">週次</span>: <strong id="week">-</strong></div>
+      <div class="row"><span data-i18n="label.performance">性能</span>: <strong id="perf"></strong></div>
+      <div class="row"><span data-i18n="label.flow">フロー</span>: <strong id="flow">-</strong></div>
+      <div class="row"><span data-i18n="label.layer0Trails">Layer0トレイル</span>: <strong id="layer0-trails">-</strong></div>
+      <div class="row"><span data-i18n="label.humanLod">人LOD</span>: <strong id="human-lod"></strong></div>
+      <div class="row"><span data-i18n="label.nameLabels">氏名表示(N)</span>: <strong id="name-labels"></strong></div>
+      <div class="row"><span data-i18n="label.states">状態</span>: <strong id="states">-</strong></div>
+      <div class="row"><span data-i18n="label.nightEncounters">夜間交流</span>: <strong id="encounters">-</strong></div>
+      <div class="row"><span data-i18n="label.focusCities">フォーカス都市</span>: <strong id="focus"></strong></div>
+      <div class="row"><span data-i18n="label.religionDistribution">宗教分布</span>: <strong id="religion-counts"></strong></div>
+      <div class="row"><span data-i18n="label.religionInfluence">宗教影響力</span>: <strong id="religion-influence"></strong></div>
+      <div class="row"><span data-i18n="label.religionDoctrine">宗教信条</span>: <strong id="religion-doctrine"></strong></div>
+      <div class="row"><span data-i18n="label.birthDeathGlobal">出生/死亡(全体)</span>: <strong id="demo-total"></strong></div>
+      <div class="row"><span data-i18n="label.birthDeathCity">出生/死亡(都市別)</span>: <strong id="demo-city"></strong></div>
+      <div class="row"><span data-i18n="label.economySummary">経済サマリ</span>: <strong id="economy"></strong></div>
+      <div class="row"><span data-i18n="label.companyTop">企業トップ</span>: <strong id="company-top"></strong></div>
+      <div class="row"><span data-i18n="label.companyByCity">企業(都市別)</span>: <strong id="company-city"></strong></div>
+      <div class="row"><span data-i18n="label.macroSystem">マクロ(疫病/気候/文化/市場)</span>: <strong id="macro-system"></strong></div>
+      <div class="row"><span data-i18n="label.nations">国家</span>: <strong id="nations"></strong></div>
+      <div class="row"><span data-i18n="label.metaOrder">秩序レイヤ</span>: <strong id="meta-order"></strong></div>
+      <div class="row"><span data-i18n="label.diplomacy">外交</span>: <strong id="diplomacy"></strong></div>
+      <div class="row"><span data-i18n="label.channelLines">上層チャネル線</span>: <strong id="channel-lines"></strong></div>
+      <div class="row"><span data-i18n="label.alliances">同盟関係</span>: <strong id="alliances"></strong></div>
+      <div class="row"><span data-i18n="label.hostilities">敵対関係</span>: <strong id="hostilities"></strong></div>
+      <div class="row"><span data-i18n="label.military">軍事企業</span>: <strong id="military"></strong></div>
+      <div class="row"><span data-i18n="label.events">イベント</span>: <strong id="events"></strong></div>
+      <div class="row"><span data-i18n="label.nationEvents">国家イベント</span>: <strong id="nation-events"></strong></div>
+      <div class="row"><span data-i18n="label.history">履歴</span>: <strong id="history"></strong></div>
+      <div class="row"><span data-i18n="label.lineageSummary">家系サマリ</span>: <strong id="lineage-summary"></strong></div>
       <div id="lineage-tree"></div>
-      <div class="row">経済力トップ: <strong id="top-econ"></strong></div>
-      <div class="row">知能トップ: <strong id="top-cog"></strong></div>
-      <div class="row">社交性トップ: <strong id="top-soc"></strong></div>
-      <div class="row">遺伝子潜在トップ: <strong id="top-gene"></strong></div>
-      <div class="row">エピ変動トップ: <strong id="top-epi"></strong></div>
-      <div class="row">遺伝多様性: <strong id="gene-diversity"></strong></div>
+      <div class="row"><span data-i18n="label.topEcon">経済力トップ</span>: <strong id="top-econ"></strong></div>
+      <div class="row"><span data-i18n="label.topCog">知能トップ</span>: <strong id="top-cog"></strong></div>
+      <div class="row"><span data-i18n="label.topSoc">社交性トップ</span>: <strong id="top-soc"></strong></div>
+      <div class="row"><span data-i18n="label.topGene">遺伝子潜在トップ</span>: <strong id="top-gene"></strong></div>
+      <div class="row"><span data-i18n="label.topEpi">エピ変動トップ</span>: <strong id="top-epi"></strong></div>
+      <div class="row"><span data-i18n="label.geneDiversity">遺伝多様性</span>: <strong id="gene-diversity"></strong></div>
       <div id="insights">
         <div class="insight-head">
-          <span>現在人口</span>
+          <span data-i18n="insight.population">現在人口</span>
           <button id="toggle-population" class="insight-toggle">Hide</button>
         </div>
         <div id="population-board" class="insight-body"></div>
         <div class="insight-head">
-          <span>都市ニュース</span>
+          <span data-i18n="insight.cityNews">都市ニュース</span>
           <button id="toggle-city-news" class="insight-toggle">Hide</button>
         </div>
         <div id="city-news-board" class="insight-body"></div>
@@ -398,12 +407,12 @@
     </div>
     <div id="right-insights">
       <div class="insight-head">
-        <span>企業株価</span>
+        <span data-i18n="insight.stock">企業株価</span>
         <button id="toggle-stock" class="insight-toggle">Hide</button>
       </div>
       <div id="stock-board" class="insight-body"></div>
       <div class="insight-head">
-        <span>位相遷移</span>
+        <span data-i18n="insight.phase">位相遷移</span>
         <button id="toggle-phase" class="insight-toggle">Hide</button>
       </div>
       <div id="phase-board" class="insight-body"></div>
@@ -413,11 +422,11 @@
       <svg id="lineage-graph" viewBox="0 0 620 420" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div id="timeline">
-      <button id="tl-live">Live</button>
+      <button id="tl-live" data-i18n="timeline.live">Live</button>
       <button id="tl-prev">◀</button>
-      <button id="tl-play">Play</button>
+      <button id="tl-play" data-i18n="timeline.play">Play</button>
       <button id="tl-next">▶</button>
-      <label>Speed
+      <label><span data-i18n="timeline.speed">Speed</span>
         <select id="tl-speed">
           <option value="1">1x</option>
           <option value="2">2x</option>
@@ -425,29 +434,39 @@
         </select>
       </label>
       <input id="tl-range" type="range" min="0" max="1" value="1" step="1" />
-      <span id="tl-status">Live</span>
+      <span id="tl-status" data-i18n="timeline.live">Live</span>
     </div>
     <div id="legend">
-      <div><span class="dot a"></span>都市ノード</div>
-      <div><span class="dot" style="background:#21364f"></span>都市構造(3D)</div>
-      <div><span class="dot" style="background:#dbeeff"></span>近景で詳細都市LOD</div>
-      <div><span class="dot" style="background:#aec8e8"></span>人LOD Far(密度)</div>
-      <div><span class="dot" style="background:#85f7c7"></span>人LOD Mid(ビルボード)</div>
-      <div><span class="dot" style="background:#c9defa"></span>人LOD Near(低ポリ)</div>
-      <div><span class="dot" style="background:#ffd89d"></span>歩行者(近景)</div>
-      <div><span class="dot b"></span>フロー粒子</div>
-      <div><span class="dot c"></span>球レイヤー</div>
-      <div><span class="dot" style="background:#8dd4ff"></span>居住都市</div>
-      <div><span class="dot" style="background:#ffcc7a"></span>仕事都市</div>
-      <div><span class="dot" style="background:#a7f1be"></span>混合都市</div>
-      <div><span class="dot" style="background:#ff8c8c"></span>人: Work</div>
-      <div><span class="dot" style="background:#ffc96f"></span>人: Commute</div>
-      <div><span class="dot" style="background:#85f7c7"></span>人: Leisure</div>
-      <div><span class="dot" style="background:#6dffbe"></span>疫病オーラ</div>
-      <div><span class="dot" style="background:#ffae7a"></span>自然災害ストレス</div>
-      <div><span class="dot" style="background:#9ed1ff"></span>イベントパルス</div>
-      <div><span class="dot" style="background:#6f95c2"></span>国家領土(透過)</div>
-      <div><span class="dot" style="background:#9bbdff"></span>国家間外交ライン</div>
+      <div><span class="dot a"></span><span data-i18n="legend.cityNode">都市ノード</span></div>
+      <div><span class="dot" style="background:#21364f"></span><span data-i18n="legend.city3d">都市構造(3D)</span></div>
+      <div><span class="dot" style="background:#dbeeff"></span><span data-i18n="legend.cityLodDetail">近景で詳細都市LOD</span></div>
+      <div><span class="dot" style="background:#aec8e8"></span><span data-i18n="legend.humanFar">人LOD Far(密度)</span></div>
+      <div><span class="dot" style="background:#85f7c7"></span><span data-i18n="legend.humanMid">人LOD Mid(ビルボード)</span></div>
+      <div><span class="dot" style="background:#c9defa"></span><span data-i18n="legend.humanNear">人LOD Near(低ポリ)</span></div>
+      <div><span class="dot" style="background:#ffd89d"></span><span data-i18n="legend.pedestrian">歩行者(近景)</span></div>
+      <div><span class="dot b"></span><span data-i18n="legend.flowParticles">フロー粒子</span></div>
+      <div><span class="dot c"></span><span data-i18n="legend.sphereLayer">球レイヤー</span></div>
+      <div><span class="dot" style="background:#8dd4ff"></span><span data-i18n="legend.cityResidential">居住都市</span></div>
+      <div><span class="dot" style="background:#ffcc7a"></span><span data-i18n="legend.cityWorkHub">仕事都市</span></div>
+      <div><span class="dot" style="background:#a7f1be"></span><span data-i18n="legend.cityMixed">混合都市</span></div>
+      <div><span class="dot" style="background:#ff8c8c"></span><span data-i18n="legend.stateWork">人: Work</span></div>
+      <div><span class="dot" style="background:#ffc96f"></span><span data-i18n="legend.stateCommute">人: Commute</span></div>
+      <div><span class="dot" style="background:#85f7c7"></span><span data-i18n="legend.stateLeisure">人: Leisure</span></div>
+      <div><span class="dot" style="background:#5fffc8"></span><span data-i18n="legend.layer0Trail">Layer0イベントトレイル</span></div>
+      <div><span class="dot" style="background:#6dffbe"></span><span data-i18n="legend.epidemicAura">疫病オーラ</span></div>
+      <div><span class="dot" style="background:#ffae7a"></span><span data-i18n="legend.disasterStress">自然災害ストレス</span></div>
+      <div><span class="dot" style="background:#9ed1ff"></span><span data-i18n="legend.eventPulse">イベントパルス</span></div>
+      <div><span class="dot" style="background:#6f95c2"></span><span data-i18n="legend.nationTerritory">国家領土(透過)</span></div>
+      <div><span class="dot" style="background:#9bbdff"></span><span data-i18n="legend.channelDiplomacy">外交チャンネル(上層間)</span></div>
+      <div><span class="dot" style="background:#7dffbe"></span><span data-i18n="legend.channelInstitutional">制度圏チャンネル(Bloc)</span></div>
+      <div><span class="dot" style="background:#d78bff"></span><span data-i18n="legend.channelShadow">非公式上層チャンネル(Shadow)</span></div>
+      <div><span class="dot" style="background:#35ffd7"></span><span data-i18n="legend.cityCommunity">都市間コミュニティネットワーク</span></div>
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(147,195,255,0.25);">
+        <div style="color:var(--muted);margin-bottom:4px;" data-i18n="legend.channelTitle">上層チャネル表示</div>
+        <label style="display:block;margin:2px 0;"><input id="toggle-channel-diplomacy" type="checkbox" checked /> <span data-i18n="legend.channelDiplomacyShort">外交</span></label>
+        <label style="display:block;margin:2px 0;"><input id="toggle-channel-institutional" type="checkbox" checked /> <span data-i18n="legend.channelInstitutionalShort">制度圏</span></label>
+        <label style="display:block;margin:2px 0;"><input id="toggle-channel-shadow" type="checkbox" checked /> <span data-i18n="legend.channelShadowShort">非公式上層</span></label>
+      </div>
     </div>
 
     <script type="importmap">

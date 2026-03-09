@@ -794,6 +794,10 @@ function buildHudSnapshot({ frame, world, maxEvents, maxCities, lineageLines, in
     }));
   const populationBoard = includeBoards ? buildPopulationBoard(frame, world, maxCities) : null;
   const cityNewsBoard = includeBoards ? buildCityNewsBoard(frame, world, maxEvents, maxCities, selectedEvents) : null;
+  const informationMetrics =
+    frame.system?.informationDynamics?.metrics ??
+    frame.system?.information?.metrics ??
+    null;
 
   return {
     meta: {
@@ -854,6 +858,18 @@ function buildHudSnapshot({ frame, world, maxEvents, maxCities, lineageLines, in
       technology: summarizeTechnologySystem(frame.system?.technology ?? {}, geo.nations ?? []),
       currency: summarizeCurrencySystem(frame.system?.currencies ?? {}, geo.nations ?? [])
     },
+    information: informationMetrics
+      ? {
+          activeInfoCount: informationMetrics.activeInfoCount ?? 0,
+          activeMisinfoShare: informationMetrics.activeMisinfoShare ?? 0,
+          consumedThisTick: informationMetrics.consumedThisTick ?? 0,
+          sharedThisTick: informationMetrics.sharedThisTick ?? 0,
+          verifiedThisTick: informationMetrics.verifiedThisTick ?? 0,
+          reportedThisTick: informationMetrics.reportedThisTick ?? 0,
+          layerTransitions: informationMetrics.layerTransitions ?? null,
+          layerBlocked: informationMetrics.layerBlocked ?? null
+        }
+      : null,
     geopolitics: {
       nations: (geo.nations ?? [])
         .slice()
@@ -891,7 +907,17 @@ function buildHudSnapshot({ frame, world, maxEvents, maxCities, lineageLines, in
       population: populationBoard,
       cityNews: cityNewsBoard
     },
-    lines: buildHudLines({ frame, world, focusCities, topDemoCities, topCompanyByCity, populationBoard, cityNewsBoard, events: selectedEvents })
+    lines: buildHudLines({
+      frame,
+      world,
+      focusCities,
+      topDemoCities,
+      topCompanyByCity,
+      populationBoard,
+      cityNewsBoard,
+      events: selectedEvents,
+      informationMetrics
+    })
   };
 }
 
@@ -1527,7 +1553,17 @@ function roundObj(obj, digits = 3) {
   return out;
 }
 
-function buildHudLines({ frame, world, focusCities, topDemoCities, topCompanyByCity, populationBoard, cityNewsBoard, events = null }) {
+function buildHudLines({
+  frame,
+  world,
+  focusCities,
+  topDemoCities,
+  topCompanyByCity,
+  populationBoard,
+  cityNewsBoard,
+  events = null,
+  informationMetrics = null
+}) {
   const rows = [];
   const s = frame.people?.stateCounts ?? {};
   const outFlow = (frame.flows ?? []).reduce((sum, row) => sum + (row.outbound ?? 0), 0);
@@ -1565,6 +1601,7 @@ function buildHudLines({ frame, world, focusCities, topDemoCities, topCompanyByC
   );
   rows.push(`マクロ: ${formatMacroSystem(frame.system ?? {})}`);
   rows.push(`通貨: ${formatCurrencySystem(frame.system?.currencies ?? {}, frame.geopolitics?.nations ?? [])}`);
+  rows.push(`情報伝播: ${formatInformationSummary(informationMetrics)}`);
   rows.push(`国家: ${formatNationSummary(frame.geopolitics ?? {})}`);
   rows.push(`外交: ${formatDiplomacySummary(frame.geopolitics ?? {})}`);
   rows.push(`同盟関係: ${formatAllianceSummary(frame.geopolitics ?? {})}`);
@@ -1581,6 +1618,25 @@ function buildHudLines({ frame, world, focusCities, topDemoCities, topCompanyByC
     rows.push(`都市ニュース\n${cityNewsBoard}`);
   }
   return rows;
+}
+
+function formatInformationSummary(metrics) {
+  if (!metrics) {
+    return "-";
+  }
+  const t = metrics.layerTransitions ?? {};
+  const b = metrics.layerBlocked ?? {};
+  const pass01 = t?.Layer0?.Layer1 ?? 0;
+  const pass12 = t?.Layer1?.Layer2 ?? 0;
+  const pass20 = t?.Layer2?.Layer0 ?? 0;
+  const block01 = b?.Layer0?.Layer1 ?? 0;
+  const block12 = b?.Layer1?.Layer2 ?? 0;
+  const block20 = b?.Layer2?.Layer0 ?? 0;
+  return (
+    `active:${metrics.activeInfoCount ?? 0} mis:${metrics.activeMisinfoShare ?? 0} ` +
+    `通過 L0→L1:${pass01} L1→L2:${pass12} L2→L0:${pass20} ` +
+    `遮断 L0→L1:${block01} L1→L2:${block12} L2→L0:${block20}`
+  );
 }
 
 function toNamedHighlight(row, world) {

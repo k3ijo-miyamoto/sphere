@@ -34,7 +34,10 @@ function updateHud(frame) {
   setText("religion-counts", ((people?.religionStats ?? []).map((r) => `${r.religion}:${r.count}`).join(" | ")) || "-");
   setText("religion-influence", ((people?.religionStats ?? []).map((r) => `${r.religion}:${r.influence}`).join(" | ")) || "-");
   setText("religion-doctrine", ((people?.religionStats ?? []).map((r) => `${r.religion}:${r.doctrine}`).join(" | ")) || "-");
-  setText("demo-total", `出生:${people?.demographics?.totalBirths ?? 0} / 死亡:${people?.demographics?.totalDeaths ?? 0}`);
+  setText(
+    "demo-total",
+    `出生:${people?.demographics?.totalBirths ?? 0} / 死亡:${people?.demographics?.totalDeaths ?? 0}(戦${people?.demographics?.totalWarDeaths ?? 0})`
+  );
   setText(
     "economy",
     `平均所得:${people?.economy?.avgIncome ?? 0} / 失業率:${people?.economy?.unemploymentRate ?? 0}%`
