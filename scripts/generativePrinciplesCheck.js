@@ -27,12 +27,14 @@ const EVAL_PROFILES = {
 const args = parseArgs(process.argv.slice(2));
 const days = args.days ?? 45;
 const seed = args.seed ?? DEFAULT_CONFIG.seed;
-const outPath = path.resolve(process.cwd(), args.out ?? "generative_principles_report.json");
+const defaultOutRelPath = path.join("reports", "generative_principles", "generative_principles_report.json");
+const outPath = path.resolve(process.cwd(), args.out ?? defaultOutRelPath);
 const targetCityId = args.city ?? "C1";
 const trackedIndividuals = args.tracked ?? null;
 const evalProfile = resolveEvalProfile(args.evalProfile);
 
 const report = run({ days, seed, targetCityId, trackedIndividuals, evalProfile });
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, JSON.stringify(report, null, 2), "utf8");
 console.log(`Wrote ${outPath}`);
 console.log(formatSummary(report));
@@ -829,7 +831,7 @@ function parseArgs(argv) {
     if (a === "--days") out.days = Number.parseInt(argv[++i] ?? "0", 10);
     else if (a === "--seed") out.seed = Number.parseInt(argv[++i] ?? "0", 10);
     else if (a === "--city") out.city = String(argv[++i] ?? "C1");
-    else if (a === "--out") out.out = String(argv[++i] ?? "generative_principles_report.json");
+    else if (a === "--out") out.out = String(argv[++i] ?? defaultOutRelPath);
     else if (a === "--tracked") out.tracked = Number.parseInt(argv[++i] ?? "0", 10);
     else if (a === "--eval-profile") out.evalProfile = String(argv[++i] ?? "stability-first");
   }

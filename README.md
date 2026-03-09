@@ -110,15 +110,22 @@ This project can be read in the following 8 fixed layers:
    - Uses epsilon-greedy action selection with Q-value updates.
 
 ```mermaid
-flowchart TD
-  A1[1. Time Loop<br/>SimulationEngine.tick] --> A2[2. Agent Behavior<br/>resolveState/updateLocation]
-  A2 --> A3[3. Employment / Income<br/>applyEmploymentAndEconomy]
-  A3 --> A4[4. Company Dynamics<br/>P/L valuation dividends investments]
-  A4 --> A5[5. Resources / Macro<br/>updateCityDynamics]
-  A5 --> A6[6. Geopolitics<br/>updateGeopolitics]
-  A6 --> A7[7. Meta-Order 1-5<br/>blocs/zones/hegemony]
-  A7 --> A8[8. Reinforcement Learning<br/>company/resource/diplomacy/etc]
-  A8 --> A1
+sequenceDiagram
+  participant Clock
+  participant Engine
+  participant Pop as Population
+  participant City as CityDynamics
+  participant Geo as Geopolitics
+  participant Frame
+
+  Clock->>Engine: phase/day/minute
+  Engine->>Pop: tick(phase, day, minuteOfDay)
+  Pop-->>Engine: peopleFrame
+  Engine->>City: updateCityDynamics(world, peopleFrame)
+  Engine->>Geo: updateGeopolitics(world, peopleFrame, phase, day)
+  Geo-->>Engine: geopolitics(+events)
+  Engine->>Frame: compose(frame.system/frame.people/frame.geopolitics)
+  Engine->>Clock: tick(+30min)
 ```
 
 ### MCP Client Config
@@ -180,6 +187,16 @@ npm run test:scenarios
 ```
 
 This runs deterministic policy scenarios against city dynamics to catch behavioral regressions.
+
+## Generative Principles Report
+
+```bash
+npm run report:generative-principles
+```
+
+Default output path:
+
+- `reports/generative_principles/generative_principles_report.json`
 
 ## Current Scope
 

@@ -15,7 +15,7 @@ Use this skill when the user asks to verify whether Sphere still satisfies its 3
 ## Run
 
 ```bash
-npm run report:generative-principles -- --days 45 --seed 1337 --city C1 --out generative_principles_report.json
+npm run report:generative-principles -- --days 45 --seed 1337 --city C1 --out reports/generative_principles/generative_principles_report.json
 ```
 
 You may change:
